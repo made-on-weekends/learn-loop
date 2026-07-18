@@ -23,41 +23,39 @@ class PdfService {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
+        // Row 1: Title (styled clean using Helvetica Bold to avoid broken tracing fonts)
+        pw.Text(
+          global.title.isNotEmpty ? global.title : sheetTitle,
+          style: pw.TextStyle(
+            font: pw.Font.helveticaBold(),
+            fontSize: 18,
+            fontWeight: pw.FontWeight.bold,
+          ),
+        ),
+        pw.SizedBox(height: 6),
+        // Row 2: Name (left) and Date (right)
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: pw.CrossAxisAlignment.end,
           children: [
-            pw.Text(
-              global.title.isNotEmpty ? global.title : sheetTitle,
-              style: pw.TextStyle(
-                font: textFont,
-                fontSize: 20,
-                fontWeight: pw.FontWeight.bold,
-              ),
-            ),
-            pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.end,
-              children: [
-                if (global.showNameLine)
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.only(bottom: 4),
-                    child: pw.Text(
-                      "Name: ______________________",
-                      style: pw.TextStyle(font: textFont, fontSize: 11),
-                    ),
-                  ),
-                if (global.showDateLine)
-                  pw.Text(
-                    "Date: _________________",
-                    style: pw.TextStyle(font: textFont, fontSize: 11),
-                  ),
-              ],
-            ),
+            if (global.showNameLine)
+              pw.Text(
+                "Name: ______________________",
+                style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 10),
+              )
+            else
+              pw.SizedBox.shrink(),
+            if (global.showDateLine)
+              pw.Text(
+                "Date: _________________",
+                style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 10),
+              )
+            else
+              pw.SizedBox.shrink(),
           ],
         ),
-        pw.SizedBox(height: 8),
+        pw.SizedBox(height: 6),
         pw.Divider(thickness: 1.0, color: PdfColors.grey300),
-        pw.SizedBox(height: 12),
+        pw.SizedBox(height: 8),
       ],
     );
   }
@@ -161,7 +159,8 @@ class PdfService {
 
     final double rowHeight = config.fontSize * 2.2;
     final double printableWidth = PdfPageFormat.a4.width - 2 * margin;
-    final double printableHeight = PdfPageFormat.a4.height - 2 * margin - (global.showHeader ? 50 : 0);
+    final double headerHeight = global.showHeader ? 75.0 : 0.0;
+    final double printableHeight = PdfPageFormat.a4.height - 2 * margin - headerHeight - 40.0;
     int rowsPerPage = (printableHeight / rowHeight).floor();
     if (rowsPerPage < 1) rowsPerPage = 1;
 
@@ -169,6 +168,18 @@ class PdfService {
     final PdfFont pdfSolid = solidFont.getFont(dummyContext);
     final PdfFont pdfDotted = dottedFont.getFont(dummyContext);
     final PdfFont measureFont = config.dottedFont ? pdfDotted : pdfSolid;
+
+    // Calculate global dynamic column sizing parameters across all items to ensure page-to-page consistency
+    double globalMaxItemWidth = 0.0;
+    for (var item in items) {
+      double w = measureFont.stringMetrics(item).size.x * config.fontSize;
+      if (w > globalMaxItemWidth) globalMaxItemWidth = w;
+    }
+    double globalCellPadding = config.fontSize * 0.8;
+    double globalCellWidth = math.max(globalMaxItemWidth + globalCellPadding, config.fontSize * 1.8);
+    int globalColsCount = (printableWidth / globalCellWidth).floor();
+    if (globalColsCount < 1) globalColsCount = 1;
+    globalCellWidth = printableWidth / globalColsCount;
 
     if (config.direction == PracticeDirection.row) {
       int itemIndex = 0;
@@ -180,21 +191,8 @@ class PdfService {
           itemIndex++;
         }
 
-        // Calculate dynamic column sizing
-        double maxItemWidth = 0.0;
-        for (var item in pageItems) {
-          double w = measureFont.stringMetrics(item).size.x * config.fontSize;
-          if (w > maxItemWidth) maxItemWidth = w;
-        }
-
-        double cellPadding = config.fontSize * 0.8;
-        double cellWidth = math.max(maxItemWidth + cellPadding, config.fontSize * 1.8);
-        int colsCount = (printableWidth / cellWidth).floor();
-        if (colsCount < 1) colsCount = 1;
-        cellWidth = printableWidth / colsCount;
-
-        final double capturedCellWidth = cellWidth;
-        final int capturedColsCount = colsCount;
+        final double capturedCellWidth = globalCellWidth;
+        final int capturedColsCount = globalColsCount;
         final List<String> capturedPageItems = List.from(pageItems);
 
         pdf.addPage(
@@ -259,36 +257,13 @@ class PdfService {
       int itemIndex = 0;
 
       while (itemIndex < items.length) {
-        // Calculate width and cols count
-        double maxItemWidth = 0.0;
-        int maxCols = (printableWidth / (config.fontSize * 1.8)).floor();
-        if (maxCols < 1) maxCols = 1;
-
-        int tempIdx = itemIndex;
-        final List<String> scanItems = [];
-        for (int c = 0; c < maxCols && tempIdx < items.length; c++) {
-          scanItems.add(items[tempIdx]);
-          tempIdx++;
-        }
-
-        for (var item in scanItems) {
-          double w = measureFont.stringMetrics(item).size.x * config.fontSize;
-          if (w > maxItemWidth) maxItemWidth = w;
-        }
-
-        double cellPadding = config.fontSize * 0.8;
-        double cellWidth = math.max(maxItemWidth + cellPadding, config.fontSize * 1.8);
-        int colsCount = (printableWidth / cellWidth).floor();
-        if (colsCount < 1) colsCount = 1;
-        cellWidth = printableWidth / colsCount;
-
         final List<String> pageItems = [];
-        for (int c = 0; c < colsCount && itemIndex < items.length; c++) {
+        for (int c = 0; c < globalColsCount && itemIndex < items.length; c++) {
           pageItems.add(items[itemIndex]);
           itemIndex++;
         }
 
-        final double capturedCellWidth = cellWidth;
+        final double capturedCellWidth = globalCellWidth;
         final List<String> capturedPageItems = List.from(pageItems);
 
         pdf.addPage(
@@ -368,9 +343,10 @@ class PdfService {
     final double height = size.y;
 
     final double baselineY = height * 0.32;
-    final double topLineY = baselineY + fontSize * 0.72;
-    final double midLineY = baselineY + fontSize * 0.38;
-    final double bottomLineY = baselineY - fontSize * 0.22;
+    final double lineSpacing = fontSize * 0.35;
+    final double topLineY = baselineY + lineSpacing * 2.0;
+    final double midLineY = baselineY + lineSpacing;
+    final double bottomLineY = baselineY - lineSpacing;
 
     canvas.saveContext();
 
@@ -450,8 +426,9 @@ class PdfService {
         build: (context) {
           final PdfFont pdfSolid = solidFont.getFont(context);
 
-          final double printableWidth = PdfPageFormat.a4.width - 2 * margin;
-          final double printableHeight = PdfPageFormat.a4.height - 2 * margin - (global.showHeader ? 50 : 0);
+           final double printableWidth = PdfPageFormat.a4.width - 2 * margin;
+          final double headerHeight = global.showHeader ? 75.0 : 0.0;
+          final double printableHeight = PdfPageFormat.a4.height - 2 * margin - headerHeight - 12.0;
 
           final int questions = config.questionsPerPage;
           final int rows = (questions / 2).ceil();
@@ -531,7 +508,7 @@ class PdfService {
     canvas.drawRect(0, 0, width, height);
     canvas.strokePath();
 
-    final double dividerX = width * 0.7;
+    final double dividerX = activityType == CountingActivityType.countAndWrite ? width * 0.7 : width * 0.5;
     canvas.setLineDashPattern([2, 2], 0);
     canvas.drawLine(dividerX, 0, dividerX, height);
     canvas.strokePath();
@@ -572,12 +549,18 @@ class PdfService {
     } else {
       canvas.saveContext();
       final String text = count.toString();
-      final double fontSize = height * 0.45;
-      final double textWidth = font.stringMetrics(text).size.x * fontSize;
-      final double textHeight = font.stringMetrics(text).size.y * fontSize;
-      
-      final double startX = (dividerX - textWidth) / 2;
-      final double startY = (height - textHeight * 0.5) / 2;
+      // Reserve padding so the number never overlaps the divider line
+      const double rightPad = 10.0;
+      final double availableW = dividerX - rightPad;
+      double fontSize = height * 0.45;
+      double textWidth = font.stringMetrics(text).size.x * fontSize;
+      // Scale down if the glyph is too wide to fit in the left section
+      if (textWidth > availableW) {
+        fontSize = fontSize * availableW / textWidth;
+        textWidth = availableW;
+      }
+      final double startX = (availableW - textWidth) / 2;
+      final double startY = height / 2 - (font.ascent * fontSize + font.descent * fontSize) / 2;
 
       canvas.setFillColor(PdfColors.black);
       canvas.drawString(
@@ -589,23 +572,10 @@ class PdfService {
       );
       canvas.restoreContext();
 
-      canvas.saveContext();
-      final String instruction = "Draw $count shapes below:";
-      final double textW = font.stringMetrics(instruction).size.x * 8.0;
-      canvas.setFillColor(PdfColors.grey600);
-      canvas.drawString(
-        font,
-        8.0,
-        instruction,
-        (dividerX - textW) / 2,
-        4.0,
-      );
-      canvas.restoreContext();
-
-      final double boxW = width - dividerX - 16.0;
-      final double boxH = height - 16.0;
       final double bx = dividerX + 8.0;
       final double by = 8.0;
+      final double boxW = width - dividerX - 16.0;
+      final double boxH = height - 16.0;
 
       canvas.saveContext();
       canvas.setStrokeColor(PdfColors.grey500);
@@ -751,7 +721,6 @@ class PdfService {
   ) async {
     final pdf = pw.Document();
     final fonts = await _loadFonts();
-    final pw.Font solidFont = fonts['regular']!;
     final pw.Font boldFont = fonts['bold']!;
 
     final double margin = global.marginMm * mmToPt;
@@ -763,10 +732,11 @@ class PdfService {
         pageFormat: PdfPageFormat.a4,
         margin: pw.EdgeInsets.all(margin),
         build: (context) {
-          final PdfFont pdfSolid = solidFont.getFont(context);
+          final PdfFont pdfSolid = pw.Font.helvetica().getFont(context);
 
           final double printableWidth = PdfPageFormat.a4.width - 2 * margin;
-          final double printableHeight = PdfPageFormat.a4.height - 2 * margin - (global.showHeader ? 50 : 0);
+          final double headerHeight = global.showHeader ? 75.0 : 0.0;
+          final double printableHeight = PdfPageFormat.a4.height - 2 * margin - headerHeight - 12.0;
 
           final int cols = config.columnsCount;
           final int questions = config.questionsCount;
@@ -859,8 +829,29 @@ class PdfService {
       final double textSpacing = height * 0.16;
       final double fontSize = height * 0.2;
 
-      _drawCenteredText(canvas, num1.toString(), font, fontSize, equationX, startY + textSpacing);
-      _drawCenteredText(canvas, "$opStr   $num2", font, fontSize, equationX, startY);
+      final String n1Str = num1.toString();
+      final String n2Str = num2.toString();
+
+      final double n1W = font.stringMetrics(n1Str).size.x * fontSize;
+      final double n2W = font.stringMetrics(n2Str).size.x * fontSize;
+
+      // Right-align both numbers at a coordinate slightly to the right of equationX to center the layout
+      final double alignX = equationX + 12.0;
+
+      canvas.saveContext();
+      canvas.setFillColor(PdfColors.black);
+
+      // Draw top number (right-aligned at alignX)
+      canvas.drawString(font, fontSize, n1Str, alignX - n1W, startY + textSpacing);
+
+      // Draw bottom number (right-aligned at alignX)
+      canvas.drawString(font, fontSize, n2Str, alignX - n2W, startY);
+
+      // Draw operator to the left of the bottom number
+      final double opX = alignX - math.max(n1W, n2W) - 18.0;
+      canvas.drawString(font, fontSize, opStr, opX, startY);
+
+      canvas.restoreContext();
 
       canvas.saveContext();
       canvas.setStrokeColor(PdfColors.black);
@@ -873,7 +864,7 @@ class PdfService {
       canvas.saveContext();
       canvas.setStrokeColor(PdfColors.grey800);
       canvas.setLineWidth(1.5);
-      canvas.drawRect(equationX - boxSize / 2, startY - 14.0 - boxSize, boxSize, boxSize);
+      canvas.drawRect(equationX - boxSize, startY - 14.0 - boxSize, boxSize * 2, boxSize);
       canvas.strokePath();
       canvas.restoreContext();
 
@@ -904,9 +895,32 @@ class PdfService {
         canvas.restoreContext();
       }
     } else {
-      final double equationY = height * 0.6;
-      final double fontSize = height * 0.22;
+      double fontSize = height * 0.22;
+      if (fontSize > 28.0) {
+        fontSize = 28.0;
+      }
+
       final String problemText = "$num1 $opStr $num2 = ";
+      double textW = font.stringMetrics(problemText).size.x * fontSize;
+      double boxSize = fontSize * 1.25;
+      double boxWidth = boxSize * 2;
+
+      final double maxAvailable = width - 40.0;
+      if (textW + boxWidth > maxAvailable) {
+        final double scale = maxAvailable / (textW + boxWidth);
+        fontSize = fontSize * scale;
+        textW = font.stringMetrics(problemText).size.x * fontSize;
+        boxSize = fontSize * 1.25;
+        boxWidth = boxSize * 2;
+      }
+
+      final double bx = 15.0 + textW + 5.0;
+
+      // Calculate equationY and by to always be above the workspace area
+      final double workspaceTop = config.drawWorkspace ? (6.0 + height * 0.42) : 6.0;
+      final double remainingSpace = height - 6.0 - workspaceTop;
+      final double by = workspaceTop + (remainingSpace - boxSize) / 2;
+      final double equationY = by + (boxSize - fontSize * 0.7) / 2;
 
       canvas.saveContext();
       canvas.setFillColor(PdfColors.black);
@@ -919,15 +933,10 @@ class PdfService {
       );
       canvas.restoreContext();
 
-      final double textW = font.stringMetrics(problemText).size.x * fontSize;
-      final double boxSize = height * 0.25;
-      final double bx = 15.0 + textW + 5.0;
-      final double by = equationY - 4.0;
-
       canvas.saveContext();
       canvas.setStrokeColor(PdfColors.grey800);
       canvas.setLineWidth(1.5);
-      canvas.drawRect(bx, by, boxSize, boxSize);
+      canvas.drawRect(bx, by, boxWidth, boxSize);
       canvas.strokePath();
       canvas.restoreContext();
 
@@ -960,26 +969,6 @@ class PdfService {
     }
   }
 
-  static void _drawCenteredText(
-    PdfGraphics canvas,
-    String text,
-    PdfFont font,
-    double size,
-    double cx,
-    double cy,
-  ) {
-    canvas.saveContext();
-    final double textWidth = font.stringMetrics(text).size.x * size;
-    canvas.setFillColor(PdfColors.black);
-    canvas.drawString(
-      font,
-      size,
-      text,
-      cx - textWidth / 2,
-      cy,
-    );
-    canvas.restoreContext();
-  }
 
   // ==========================================
   // 4. PRE-WRITING LINES GENERATOR
@@ -1000,7 +989,8 @@ class PdfService {
         margin: pw.EdgeInsets.all(margin),
         build: (context) {
           final double printableWidth = PdfPageFormat.a4.width - 2 * margin;
-          final double printableHeight = PdfPageFormat.a4.height - 2 * margin - (global.showHeader ? 50 : 0);
+          final double headerHeight = global.showHeader ? 75.0 : 0.0;
+          final double printableHeight = PdfPageFormat.a4.height - 2 * margin - headerHeight - 12.0;
 
           final int lines = config.lineCount;
           final double spacing = printableHeight / (lines + 1);
@@ -1165,43 +1155,38 @@ class PdfService {
           pageFormat: PdfPageFormat.a4,
           margin: pw.EdgeInsets.all(margin),
           build: (context) {
-            final PdfFont pdfSolid = solidFont.getFont(context);
-            final PdfFont pdfDashed = dashedFont.getFont(context);
-
-            final double printableWidth = PdfPageFormat.a4.width - 2 * margin;
-            final double printableHeight = PdfPageFormat.a4.height - 2 * margin - (global.showHeader ? 50 : 0);
+            final List<pw.Widget> rows = [];
+            for (int i = 0; i < pageShapes.length; i += 2) {
+              final rowChildren = <pw.Widget>[];
+              rowChildren.add(
+                pw.Expanded(
+                  child: _buildShapeCard(pageShapes[i], config, solidFont),
+                ),
+              );
+              if (i + 1 < pageShapes.length) {
+                rowChildren.add(pw.SizedBox(width: 15));
+                rowChildren.add(
+                  pw.Expanded(
+                    child: _buildShapeCard(pageShapes[i + 1], config, solidFont),
+                  ),
+                );
+              } else {
+                rowChildren.add(pw.SizedBox(width: 15));
+                rowChildren.add(pw.Expanded(child: pw.SizedBox()));
+              }
+              rows.add(pw.Expanded(child: pw.Row(children: rowChildren)));
+              if (i + 2 < pageShapes.length) {
+                rows.add(pw.SizedBox(height: 15));
+              }
+            }
 
             return pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 _buildHeader(global, boldFont, "Shapes Learning & Tracing"),
                 pw.Expanded(
-                  child: pw.GridView(
-                    crossAxisCount: 2,
-                    childAspectRatio: printableWidth / (printableHeight * 0.95),
-                    crossAxisSpacing: 15.0,
-                    mainAxisSpacing: 15.0,
-                    children: List.generate(pageShapes.length, (index) {
-                      final ShapeDesign shape = pageShapes[index];
-                      return pw.Container(
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(color: PdfColors.grey300, width: 1.0),
-                          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-                        ),
-                        child: pw.CustomPaint(
-                          painter: (canvas, size) {
-                            _drawShapeTraceCard(
-                              canvas,
-                              size,
-                              shape,
-                              config,
-                              pdfSolid,
-                              pdfDashed,
-                            );
-                          },
-                        ),
-                      );
-                    }),
+                  child: pw.Column(
+                    children: rows,
                   ),
                 ),
               ],
@@ -1214,36 +1199,67 @@ class PdfService {
     return pdf.save();
   }
 
-  // Draw card containing shape + label
-  static void _drawShapeTraceCard(
+  // Build a structured shape card widget with clean typography layout
+  static pw.Widget _buildShapeCard(
+    ShapeDesign shape,
+    ShapesConfig config,
+    pw.Font solidFont,
+  ) {
+    final String shapeName = shape.name[0].toUpperCase() + shape.name.substring(1);
+
+    return pw.Container(
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey300, width: 1.0),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+      ),
+      child: pw.Column(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          // Use standard Helvetica Bold for clean, non-overlapping titles
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(top: 14),
+            child: pw.Text(
+              shapeName,
+              style: pw.TextStyle(
+                font: pw.Font.helveticaBold(),
+                fontSize: 18,
+              ),
+            ),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            child: pw.CustomPaint(
+              size: const PdfPoint(120, 120),
+              painter: (canvas, size) {
+                _drawShapeOnly(
+                  canvas,
+                  size,
+                  shape,
+                  config,
+                );
+              },
+            ),
+          ),
+          pw.SizedBox(height: 14),
+        ],
+      ),
+    );
+  }
+
+  // Draw only the shape vector and tracing guides centered inside the canvas
+  static void _drawShapeOnly(
     PdfGraphics canvas,
     PdfPoint size,
     ShapeDesign shape,
     ShapesConfig config,
-    PdfFont solidFont,
-    PdfFont dashedFont,
   ) {
     final double width = size.x;
     final double height = size.y;
 
-    final String shapeName = shape.name[0].toUpperCase() + shape.name.substring(1);
-    final double nameFontSize = height * 0.12;
-
-    canvas.saveContext();
-    final double textWidth = solidFont.stringMetrics(shapeName).size.x * nameFontSize;
-    canvas.setFillColor(PdfColors.black);
-    canvas.drawString(
-      solidFont,
-      nameFontSize,
-      shapeName,
-      (width - textWidth) / 2,
-      height - nameFontSize * 1.3,
-    );
-    canvas.restoreContext();
-
     final double cx = width / 2;
-    final double cy = height * 0.45;
-    final double shapeSize = math.min(width * 0.52, height * 0.48);
+    final double cy = height / 2;
+    final double shapeSize = math.min(width * 0.7, height * 0.7);
 
     canvas.saveContext();
     canvas.setStrokeColor(PdfColors.grey800);
@@ -1269,7 +1285,7 @@ class PdfService {
         canvas.strokePath();
         break;
       case ShapeDesign.rectangle:
-        canvas.drawRect(cx - shapeSize / 1.5, cy - shapeSize / 2.2, shapeSize * 1.33, shapeSize * 0.9);
+        canvas.drawRect(cx - shapeSize / 1.3, cy - shapeSize / 2.0, shapeSize * 1.5, shapeSize);
         canvas.strokePath();
         break;
       case ShapeDesign.star:
@@ -1314,21 +1330,6 @@ class PdfService {
         default:
           break;
       }
-      canvas.restoreContext();
-    }
-
-    if (config.showShapeNames) {
-      canvas.saveContext();
-      final double copyFontSize = height * 0.1;
-      final double copyTextW = dashedFont.stringMetrics(shapeName).size.x * copyFontSize;
-      canvas.setFillColor(PdfColors.black);
-      canvas.drawString(
-        dashedFont,
-        copyFontSize,
-        shapeName,
-        (width - copyTextW) / 2,
-        copyFontSize * 0.8,
-      );
       canvas.restoreContext();
     }
   }

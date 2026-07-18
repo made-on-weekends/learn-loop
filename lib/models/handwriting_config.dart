@@ -34,7 +34,7 @@ class HandwritingConfig {
     this.showTopLine = true,
     this.showMidLine = true,
     this.showBaseLine = true,
-    this.showBottomLine = true,
+    this.showBottomLine = false,
     this.fontSize = 36.0,
   });
 }
