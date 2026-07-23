@@ -60,6 +60,23 @@ class PdfService {
     );
   }
 
+  // Helper to draw text character by character to prevent custom TTF font glyph overlap
+  static void _drawText(
+    PdfGraphics canvas,
+    PdfFont font,
+    double fontSize,
+    String text,
+    double x,
+    double y,
+  ) {
+    double currentX = x;
+    for (int i = 0; i < text.length; i++) {
+      final String char = text[i];
+      canvas.drawString(font, fontSize, char, currentX, y);
+      currentX += font.stringMetrics(char).size.x * fontSize;
+    }
+  }
+
   // Load custom fonts with safe fallback
   static Future<Map<String, pw.Font>> _loadFonts() async {
     pw.Font regular;
@@ -342,11 +359,21 @@ class PdfService {
     final double width = size.x;
     final double height = size.y;
 
-    final double baselineY = height * 0.32;
-    final double lineSpacing = fontSize * 0.35;
-    final double topLineY = baselineY + lineSpacing * 2.0;
-    final double midLineY = baselineY + lineSpacing;
-    final double bottomLineY = baselineY - lineSpacing;
+    // Guidelines span the usable writing zone of each row.
+    // 10% top padding, 15% bottom padding → writing zone is 75% of height.
+    // Inside the writing zone:
+    //   • topLine    = top of tall letters (ascenders)
+    //   • midLine    = top of short letters (x-height / waist line)  [dashed]
+    //   • baseLine   = where letters sit (the PDF glyph baseline)    [solid]
+    //   • bottomLine = bottom of descenders (g, y, p …)
+    //
+    // The zone is split so ascender region == x-height region (50/50),
+    // and the descender zone is 30% of the x-height region.
+    final double topLineY    = height * 0.88;   // high up (remember: Y=0 is bottom in PDF)
+    final double baselineY   = height * 0.20;   // letters sit here
+    final double writingZone = topLineY - baselineY;   // full writing zone height
+    final double midLineY    = baselineY + writingZone * 0.50;  // midpoint between base and top
+    final double bottomLineY = baselineY - writingZone * 0.18;  // descender zone
 
     canvas.saveContext();
 
@@ -392,7 +419,8 @@ class PdfService {
       final double textWidth = font.stringMetrics(text).size.x * fontSize;
       final double startX = (width - textWidth) / 2;
       canvas.setFillColor(PdfColors.black);
-      canvas.drawString(
+      _drawText(
+        canvas,
         font,
         fontSize,
         text,
@@ -549,9 +577,10 @@ class PdfService {
     } else {
       canvas.saveContext();
       final String text = count.toString();
-      // Reserve padding so the number never overlaps the divider line
+      // Reserve padding so the number never overlaps the left border or the divider line
+      const double leftPad = 10.0;
       const double rightPad = 10.0;
-      final double availableW = dividerX - rightPad;
+      final double availableW = dividerX - leftPad - rightPad;
       double fontSize = height * 0.45;
       double textWidth = font.stringMetrics(text).size.x * fontSize;
       // Scale down if the glyph is too wide to fit in the left section
@@ -559,11 +588,12 @@ class PdfService {
         fontSize = fontSize * availableW / textWidth;
         textWidth = availableW;
       }
-      final double startX = (availableW - textWidth) / 2;
+      final double startX = leftPad + (availableW - textWidth) / 2;
       final double startY = height / 2 - (font.ascent * fontSize + font.descent * fontSize) / 2;
 
       canvas.setFillColor(PdfColors.black);
-      canvas.drawString(
+      _drawText(
+        canvas,
         font,
         fontSize,
         text,
@@ -1133,7 +1163,6 @@ class PdfService {
     final pdf = pw.Document();
     final fonts = await _loadFonts();
     final pw.Font solidFont = fonts['regular']!;
-    final pw.Font dashedFont = fonts['dashed']!;
     final pw.Font boldFont = fonts['bold']!;
 
     final double margin = global.marginMm * mmToPt;
