@@ -174,17 +174,29 @@ class PdfService {
     final List<String> items = _generateHandwritingItems(config);
     if (items.isEmpty) return pdf.save();
 
-    final double rowHeight = config.fontSize * 2.2;
     final double printableWidth = PdfPageFormat.a4.width - 2 * margin;
     final double headerHeight = global.showHeader ? 75.0 : 0.0;
     final double printableHeight = PdfPageFormat.a4.height - 2 * margin - headerHeight - 40.0;
-    int rowsPerPage = (printableHeight / rowHeight).floor();
-    if (rowsPerPage < 1) rowsPerPage = 1;
 
+    // Resolve fonts first so we can derive rowHeight from real font metrics.
+    // This ensures the row height is always consistent with the guideline positions
+    // computed inside _drawHandwritingRow / _drawHandwritingColumnRow.
     final dummyContext = pw.Context(document: pdf.document);
     final PdfFont pdfSolid = solidFont.getFont(dummyContext);
     final PdfFont pdfDotted = dottedFont.getFont(dummyContext);
-    final PdfFont measureFont = config.dottedFont ? pdfDotted : pdfSolid;
+    final PdfFont pdfTrace = config.dottedFont ? pdfDotted : pdfSolid;
+    final PdfFont measureFont = config.mode == PracticeMode.tracing ? pdfTrace : pdfSolid;
+
+    // Derive row height from the actual font glyph box (ascent − descent) plus
+    // vertical padding so guidelines are never clipped by the row boundary.
+    final double fontAscent  = measureFont.ascent  * config.fontSize;  // positive
+    final double fontDescent = measureFont.descent * config.fontSize;  // negative
+    final double glyphHeight = fontAscent - fontDescent;
+    // Padding = 40 % of glyph height so top/bottom guide lines have visual margin
+    final double rowHeight   = glyphHeight * 1.4;
+
+    int rowsPerPage = (printableHeight / rowHeight).floor();
+    if (rowsPerPage < 1) rowsPerPage = 1;
 
     // Calculate global dynamic column sizing parameters across all items to ensure page-to-page consistency
     double globalMaxItemWidth = 0.0;
@@ -218,8 +230,8 @@ class PdfService {
             margin: pw.EdgeInsets.all(margin),
             build: (context) {
               final PdfFont localSolid = solidFont.getFont(context);
-              final PdfFont localDotted = dottedFont.getFont(context);
-              final PdfFont localMeasureFont = config.dottedFont ? localDotted : localSolid;
+              final PdfFont localDotted = config.dottedFont ? dottedFont.getFont(context) : localSolid;
+              final double fullRowWidth = capturedCellWidth * capturedColsCount;
 
               return pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -228,38 +240,21 @@ class PdfService {
                   pw.Column(
                     children: List.generate(capturedPageItems.length, (rIndex) {
                       final String item = capturedPageItems[rIndex];
-                      return pw.Row(
-                        children: List.generate(capturedColsCount, (cIndex) {
-                          bool isEmpty = false;
-                          PdfFont font = localMeasureFont;
-
-                          if (config.mode == PracticeMode.copy) {
-                            if (cIndex == 0) {
-                              isEmpty = false;
-                              font = localSolid;
-                            } else {
-                              isEmpty = true;
-                            }
-                          } else {
-                            isEmpty = false;
-                            font = localDotted;
-                          }
-
-                          return pw.CustomPaint(
-                            size: PdfPoint(capturedCellWidth, rowHeight),
-                            painter: (canvas, size) {
-                              _drawHandwritingCell(
-                                canvas,
-                                size,
-                                item,
-                                font,
-                                config.fontSize,
-                                isEmpty,
-                                config,
-                              );
-                            },
+                      return pw.CustomPaint(
+                        size: PdfPoint(fullRowWidth, rowHeight),
+                        painter: (canvas, size) {
+                          _drawHandwritingRow(
+                            canvas,
+                            size,
+                            item,
+                            localSolid,
+                            localDotted,
+                            config.fontSize,
+                            capturedColsCount,
+                            capturedCellWidth,
+                            config,
                           );
-                        }),
+                        },
                       );
                     }),
                   ),
@@ -289,49 +284,31 @@ class PdfService {
             margin: pw.EdgeInsets.all(margin),
             build: (context) {
               final PdfFont localSolid = solidFont.getFont(context);
-              final PdfFont localDotted = dottedFont.getFont(context);
-              final PdfFont localMeasureFont = config.dottedFont ? localDotted : localSolid;
+              final PdfFont localDotted = config.dottedFont ? dottedFont.getFont(context) : localSolid;
+
+              final double fullRowWidth = capturedCellWidth * capturedPageItems.length;
 
               return pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
                   _buildHeader(global, boldFont, "Handwriting Practice"),
-                  pw.Row(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: List.generate(capturedPageItems.length, (cIndex) {
-                      final String item = capturedPageItems[cIndex];
-                      return pw.Column(
-                        children: List.generate(rowsPerPage, (rIndex) {
-                          bool isEmpty = false;
-                          PdfFont font = localMeasureFont;
-
-                          if (config.mode == PracticeMode.copy) {
-                            if (rIndex == 0) {
-                              isEmpty = false;
-                              font = localSolid;
-                            } else {
-                              isEmpty = true;
-                            }
-                          } else {
-                            isEmpty = false;
-                            font = localDotted;
-                          }
-
-                          return pw.CustomPaint(
-                            size: PdfPoint(capturedCellWidth, rowHeight),
-                            painter: (canvas, size) {
-                              _drawHandwritingCell(
-                                canvas,
-                                size,
-                                item,
-                                font,
-                                config.fontSize,
-                                isEmpty,
-                                config,
-                              );
-                            },
+                  pw.Column(
+                    children: List.generate(rowsPerPage, (rIndex) {
+                      return pw.CustomPaint(
+                        size: PdfPoint(fullRowWidth, rowHeight),
+                        painter: (canvas, size) {
+                          _drawHandwritingColumnRow(
+                            canvas,
+                            size,
+                            capturedPageItems,
+                            localSolid,
+                            localDotted,
+                            config.fontSize,
+                            capturedCellWidth,
+                            rIndex,
+                            config,
                           );
-                        }),
+                        },
                       );
                     }),
                   ),
@@ -346,35 +323,41 @@ class PdfService {
     return pdf.save();
   }
 
-  // Draw handwriting lines + text
-  static void _drawHandwritingCell(
+  // Draw a full-width handwriting row with guidelines spanning entire row width (row-direction mode).
+  // Each row has one letter repeated across all columns.
+  static void _drawHandwritingRow(
     PdfGraphics canvas,
     PdfPoint size,
     String text,
-    PdfFont font,
+    PdfFont solidFont,
+    PdfFont dottedFont,
     double fontSize,
-    bool isEmpty,
+    int colsCount,
+    double cellWidth,
     HandwritingConfig config,
   ) {
     final double width = size.x;
     final double height = size.y;
 
-    // Guidelines span the usable writing zone of each row.
-    // 10% top padding, 15% bottom padding → writing zone is 75% of height.
-    // Inside the writing zone:
-    //   • topLine    = top of tall letters (ascenders)
-    //   • midLine    = top of short letters (x-height / waist line)  [dashed]
-    //   • baseLine   = where letters sit (the PDF glyph baseline)    [solid]
-    //   • bottomLine = bottom of descenders (g, y, p …)
-    //
-    // The zone is split so ascender region == x-height region (50/50),
-    // and the descender zone is 30% of the x-height region.
-    final double topLineY    = height * 0.88;   // high up (remember: Y=0 is bottom in PDF)
-    final double baselineY   = height * 0.20;   // letters sit here
-    final double writingZone = topLineY - baselineY;   // full writing zone height
-    final double midLineY    = baselineY + writingZone * 0.50;  // midpoint between base and top
-    final double bottomLineY = baselineY - writingZone * 0.18;  // descender zone
+    // Use the dotted font (tracing font) for metric calculations since that's what
+    // the student writes against. Fall back to solid font for copy mode.
+    final PdfFont metricFont = config.mode == PracticeMode.tracing ? dottedFont : solidFont;
 
+    // Font metric-based guideline positions.
+    // PdfFont.ascent is a positive fraction, .descent is negative.
+    final double ascent  = metricFont.ascent  * fontSize;  // distance above baseline to top of caps
+    final double descent = metricFont.descent * fontSize;  // negative, below baseline
+
+    // Center the full glyph box (ascent + |descent|) vertically in the row
+    final double glyphHeight = ascent - descent; // total glyph box
+    final double baselineY = (height - glyphHeight) / 2 - descent; // PDF Y=0 at bottom
+
+    // Guideline positions derived from font metrics
+    final double topLineY    = baselineY + ascent;                 // top of uppercase / ascenders
+    final double midLineY    = baselineY + ascent * 0.55;          // x-height (approx 55% of ascent)
+    final double bottomLineY = baselineY + descent;                // bottom of descenders (g, y, p)
+
+    // 1. Draw full-width guidelines
     canvas.saveContext();
 
     if (config.showTopLine) {
@@ -407,29 +390,130 @@ class PdfService {
       canvas.strokePath();
     }
 
-    canvas.setStrokeColor(PdfColors.grey300);
-    canvas.setLineWidth(0.5);
-    canvas.drawLine(width, 0, width, height);
-    canvas.strokePath();
+    canvas.restoreContext();
+
+    // 2. Draw text at each cell position
+    for (int cIndex = 0; cIndex < colsCount; cIndex++) {
+      bool isEmpty = false;
+      PdfFont font;
+
+      if (config.mode == PracticeMode.copy) {
+        if (cIndex == 0) {
+          isEmpty = false;
+          font = solidFont;
+        } else {
+          isEmpty = true;
+          font = dottedFont;
+        }
+      } else {
+        isEmpty = false;
+        font = dottedFont;
+      }
+
+      if (!isEmpty && text.isNotEmpty) {
+        canvas.saveContext();
+        final double textWidth = font.stringMetrics(text).size.x * fontSize;
+        final double cellStartX = cIndex * cellWidth;
+        final double startX = cellStartX + (cellWidth - textWidth) / 2;
+        canvas.setFillColor(PdfColors.black);
+        _drawText(canvas, font, fontSize, text, startX, baselineY);
+        canvas.restoreContext();
+      }
+    }
+  }
+
+  // Draw a full-width handwriting row for column-direction mode.
+  // Each column has a different letter; rIndex determines if solid or dotted (copy mode).
+  static void _drawHandwritingColumnRow(
+    PdfGraphics canvas,
+    PdfPoint size,
+    List<String> columnItems,
+    PdfFont solidFont,
+    PdfFont dottedFont,
+    double fontSize,
+    double cellWidth,
+    int rIndex,
+    HandwritingConfig config,
+  ) {
+    final double width = size.x;
+    final double height = size.y;
+
+    // Font metric-based guideline positions (same logic as _drawHandwritingRow)
+    final PdfFont metricFont = config.mode == PracticeMode.tracing ? dottedFont : solidFont;
+    final double ascent  = metricFont.ascent  * fontSize;
+    final double descent = metricFont.descent * fontSize;
+    final double glyphHeight = ascent - descent;
+    final double baselineY = (height - glyphHeight) / 2 - descent;
+    final double topLineY    = baselineY + ascent;
+    final double midLineY    = baselineY + ascent * 0.55;
+    final double bottomLineY = baselineY + descent;
+
+    // 1. Draw full-width guidelines
+    canvas.saveContext();
+
+    if (config.showTopLine) {
+      canvas.setStrokeColor(PdfColors.grey500);
+      canvas.setLineWidth(0.5);
+      canvas.drawLine(0, topLineY, width, topLineY);
+      canvas.strokePath();
+    }
+
+    if (config.showMidLine) {
+      canvas.setStrokeColor(PdfColors.grey400);
+      canvas.setLineWidth(0.5);
+      canvas.setLineDashPattern([3, 3], 0);
+      canvas.drawLine(0, midLineY, width, midLineY);
+      canvas.strokePath();
+      canvas.setLineDashPattern([], 0);
+    }
+
+    if (config.showBaseLine) {
+      canvas.setStrokeColor(PdfColors.grey700);
+      canvas.setLineWidth(0.8);
+      canvas.drawLine(0, baselineY, width, baselineY);
+      canvas.strokePath();
+    }
+
+    if (config.showBottomLine) {
+      canvas.setStrokeColor(PdfColors.grey500);
+      canvas.setLineWidth(0.5);
+      canvas.drawLine(0, bottomLineY, width, bottomLineY);
+      canvas.strokePath();
+    }
 
     canvas.restoreContext();
 
-    if (!isEmpty && text.isNotEmpty) {
-      canvas.saveContext();
-      final double textWidth = font.stringMetrics(text).size.x * fontSize;
-      final double startX = (width - textWidth) / 2;
-      canvas.setFillColor(PdfColors.black);
-      _drawText(
-        canvas,
-        font,
-        fontSize,
-        text,
-        startX,
-        baselineY,
-      );
-      canvas.restoreContext();
+    // 2. Draw text at each column position
+    for (int cIndex = 0; cIndex < columnItems.length; cIndex++) {
+      final String item = columnItems[cIndex];
+      bool isEmpty = false;
+      PdfFont font;
+
+      if (config.mode == PracticeMode.copy) {
+        if (rIndex == 0) {
+          isEmpty = false;
+          font = solidFont;
+        } else {
+          isEmpty = true;
+          font = dottedFont;
+        }
+      } else {
+        isEmpty = false;
+        font = dottedFont;
+      }
+
+      if (!isEmpty && item.isNotEmpty) {
+        canvas.saveContext();
+        final double textWidth = font.stringMetrics(item).size.x * fontSize;
+        final double cellStartX = cIndex * cellWidth;
+        final double startX = cellStartX + (cellWidth - textWidth) / 2;
+        canvas.setFillColor(PdfColors.black);
+        _drawText(canvas, font, fontSize, item, startX, baselineY);
+        canvas.restoreContext();
+      }
     }
   }
+
 
   // ==========================================
   // 2. NUMBERS AND COUNTING GENERATOR
