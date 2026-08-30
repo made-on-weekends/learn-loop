@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learn_loop/models/global_config.dart';
 import 'package:learn_loop/models/handwriting_config.dart';
+import 'package:learn_loop/models/handwriting_line_style.dart';
 import 'package:learn_loop/models/counting_config.dart';
 import 'package:learn_loop/services/pdf_service.dart';
 
@@ -26,6 +27,48 @@ void main() {
 
       final pdfBytes = await PdfService.generateHandwriting(globalConfig, config);
       expect(pdfBytes, isNotEmpty);
+    });
+
+    test('generateHandwriting supports all Zaner-Bloser grade level presets', () async {
+      final globalConfig = GlobalConfig(title: 'Grade Level Test');
+
+      for (var grade in GradeLevel.values) {
+        final config = HandwritingConfig();
+        config.applyGradePreset(grade);
+        config.colorScheme = GuidelineColorScheme.zanerBloser;
+        config.showRedMarginLine = true;
+
+        final pdfBytes = await PdfService.generateHandwriting(globalConfig, config);
+        expect(pdfBytes, isNotEmpty);
+
+        if (grade != GradeLevel.custom) {
+          expect(config.effectiveWritingHeightPt, equals(grade.defaultWritingHeightPt));
+          expect(config.effectiveMidlineFromBaselinePt, equals(grade.defaultWritingHeightPt * 0.5));
+          expect(config.effectiveDescenderBufferPt, equals(grade.defaultWritingHeightPt * 0.5));
+        }
+      }
+    });
+
+    test('generateHandwriting generates valid PDF in monochrome ink-saver mode', () async {
+      final globalConfig = GlobalConfig(title: 'Monochrome Test');
+      final config = HandwritingConfig();
+      config.colorScheme = GuidelineColorScheme.monochrome;
+      config.showRedMarginLine = false;
+
+      final pdfBytes = await PdfService.generateHandwriting(globalConfig, config);
+      expect(pdfBytes, isNotEmpty);
+    });
+
+    test('generateHandwriting supports all 4 HandwritingLineStyle choices', () async {
+      final globalConfig = GlobalConfig(title: 'Line Style Test');
+
+      for (var style in HandwritingLineStyle.values) {
+        final config = HandwritingConfig();
+        config.lineStyleOverride = style;
+
+        final pdfBytes = await PdfService.generateHandwriting(globalConfig, config);
+        expect(pdfBytes, isNotEmpty);
+      }
     });
   });
 

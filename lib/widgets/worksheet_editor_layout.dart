@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class WorksheetEditorLayout extends StatelessWidget {
   final String title;
@@ -17,13 +18,21 @@ class WorksheetEditorLayout extends StatelessWidget {
     this.onReset,
   });
 
+  Future<void> _launchDonation() async {
+    final Uri url = Uri.parse(
+      'https://asifiqbal.rocks/donation?utm_source=learn_loop&utm_medium=flutter_app&utm_campaign=app_header&ref=learn-loop-app',
+    );
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final isWide = width > 800;
     final theme = Theme.of(context);
 
-    // Common PDF Preview Config
     Widget buildPreview() {
       return PdfPreview(
         build: (format) => pdfBuilder(),
@@ -53,29 +62,34 @@ class WorksheetEditorLayout extends StatelessWidget {
       );
     }
 
+    final actions = [
+      IconButton(
+        icon: const Icon(Icons.coffee, color: Color(0xFFF59E0B)),
+        tooltip: "Support the Maintainer",
+        onPressed: _launchDonation,
+      ),
+      if (onReset != null)
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          tooltip: "Reset Config",
+          onPressed: onReset,
+        ),
+    ];
+
     if (isWide) {
-      // Split Screen Layout
       return Scaffold(
         appBar: AppBar(
           title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-          actions: [
-            if (onReset != null)
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                tooltip: "Reset Config",
-                onPressed: onReset,
-              ),
-          ],
+          actions: actions,
         ),
         body: Row(
           children: [
-            // Settings Panel (Left side)
             Expanded(
               flex: 4,
               child: Container(
                 decoration: BoxDecoration(
                   border: Border(
-                    right: BorderSide(color: theme.dividerColor.withOpacity(0.4)),
+                    right: BorderSide(color: theme.dividerColor.withValues(alpha: 0.4)),
                   ),
                 ),
                 child: SingleChildScrollView(
@@ -84,11 +98,10 @@ class WorksheetEditorLayout extends StatelessWidget {
                 ),
               ),
             ),
-            // Live PDF Preview Panel (Right side)
             Expanded(
               flex: 6,
               child: Container(
-                color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                 padding: const EdgeInsets.all(16.0),
                 child: buildPreview(),
               ),
@@ -97,19 +110,12 @@ class WorksheetEditorLayout extends StatelessWidget {
         ),
       );
     } else {
-      // Mobile Tabbed Layout
       return DefaultTabController(
         length: 2,
         child: Scaffold(
           appBar: AppBar(
             title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-            actions: [
-              if (onReset != null)
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: onReset,
-                ),
-            ],
+            actions: actions,
             bottom: TabBar(
               tabs: const [
                 Tab(
@@ -122,18 +128,16 @@ class WorksheetEditorLayout extends StatelessWidget {
                 ),
               ],
               labelColor: theme.colorScheme.primary,
-              unselectedLabelColor: theme.colorScheme.onSurface.withOpacity(0.6),
+              unselectedLabelColor: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           body: TabBarView(
-            physics: const NeverScrollableScrollPhysics(), // Prevent swipe conflicts with PDF zoom
+            physics: const NeverScrollableScrollPhysics(),
             children: [
-              // Tab 1: Settings Form
               SingleChildScrollView(
                 padding: const EdgeInsets.all(20.0),
                 child: settingsWidget,
               ),
-              // Tab 2: PDF Preview
               Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: buildPreview(),

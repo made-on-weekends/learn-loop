@@ -4,20 +4,43 @@
 [![Framework: Flutter](https://img.shields.io/badge/Framework-Flutter%203.x-blue.svg)](https://flutter.dev)
 [![Language: Dart](https://img.shields.io/badge/Language-Dart-success.svg)](https://dart.dev)
 
-Learn Loop is a mobile and web application built with Flutter that allows parents, preschool teachers, and home-school educators to dynamically customize, preview, and print A4-sized educational worksheets for toddlers (ages 2–6).
+Learn Loop is a mobile and web application built with Flutter that allows parents, preschool teachers, and home-school educators to dynamically customize, preview, and print high-resolution educational worksheets for toddlers and young learners (ages 2–9).
 
-The application operates completely offline, runs entirely on the client, and generates ink-efficient worksheets directly on the device using low-level vector paths for high-quality, scalable printing.
+The application operates completely offline, runs entirely on the client, and generates high-resolution 300 DPI vector PDFs directly on the device.
 
 ---
 
 ## ✨ Features
 
 1. **Global Header Config**: Add a custom sheet title, student name line, and date line.
-2. **Handwriting Practice**: Solid or dotted tracing letters, numbers, and custom words with customizable/toggleable guidelines (top, midline, baseline, bottom line).
+2. **Authentic Zaner-Bloser Handwriting Practice**: Grade-level guidelines (Kindergarten to Grade 3) with authentic visual anchor colors (Solid Red Headline, Dotted Blue Midline, Thick Black Baseline) and 0.75-inch left margin red line guide.
 3. **Numbers & Counting**: "Count and Write" exercises and "Draw to Match" shape grids with customizable target counts.
 4. **Addition & Subtraction**: Basic arithmetic configuration in adjustable ranges, horizontal/vertical displays, and optional drawing scratch spaces.
 5. **Pre-Writing Lines**: Dotted lines tracing straight, wave, zigzag, and castle patterns for fine-motor control practice.
 6. **Shapes Tracing**: Tracing circles, squares, triangles, rectangles, stars, and hearts with directional indicator arrows and name copy guides.
+
+---
+
+## 📏 Zaner-Bloser Grade-Level Specifications
+
+Learn Loop implements exact fractional-inch measurements for authentic handwriting paper across grade levels:
+
+| Grade Level | Total Line Height (Baseline to Headline) | Midline Position (From Baseline) | Descender Buffer / Skip Space |
+| :--- | :--- | :--- | :--- |
+| **Kindergarten (Ages 4–6)** | 1.00 inch | 0.50 inch (50%) | 0.50 inch |
+| **Grade 1 (Ages 6–7)** | 0.625 inch (5/8") | 0.3125 inch (50%) | 0.3125 inch |
+| **Grade 2 (Ages 7–8)** | 0.50 inch (1/2") | 0.25 inch (50%) | 0.25 inch |
+| **Grade 3 (Ages 8–9)** | 0.375 inch (3/8") | 0.1875 inch (50%) | 0.1875 inch |
+
+### 🎨 Line Style and Color Specifications
+
+Authentic Zaner-Bloser paper uses distinct visual anchors to guide young writers:
+
+- **Headline (Top)**: Solid Red line. Marks the upper boundary for uppercase letters and ascenders.
+- **Midline (Center)**: Dashed/Dotted Blue line. Marks the half-way boundary for lowercase letter bodies.
+- **Baseline (Bottom)**: Thick, solid Black line. The "ground" where all letters sit.
+- **Descender / Skip Space**: The blank area under the baseline. It has no printed bottom boundary, using the next line's red headline as its floor.
+- **Left Red Margin Guide**: A solid vertical red line at 0.75 inches (19.05 mm) to teach students where to start writing sentences.
 
 ---
 
@@ -60,28 +83,7 @@ The codebase follows clean Flutter conventions:
 - **`lib/screens/`**: Dashboard and editor screens (e.g., `HomeScreen`, `HandwritingScreen`, etc.).
 - **`lib/models/`**: Immutable configuration states for worksheets.
 - **`lib/widgets/`**: Reusable components, including `WorksheetEditorLayout` which manages responsive split-screen (desktop) and tabbed (mobile) viewports.
-- **`lib/services/pdf_service.dart`**: Stateless service drawing vector paths onto low-level PDF canvases for clean A4 printing.
-
----
-
-## 🎨 Design System
-
-Learn Loop utilizes a strict design system for both UI interactions and print documents:
-- **UI System**: Clean Indigo theme seed with vibrant gradient markers on the home dashboard. Fully supports native Dark Mode.
-- **PDF Print Palette**: Monochrome/greyscale ink-efficient design (no heavy fills or solid margins) using specific grey levels (`grey300` to `grey700`) to conserve printer ink.
-- **Typography**: Uses `Outfit` (headings) and `Inter` (body) for UI, and specialised fonts (`PrintClearly.otf`, `PrintDashed.otf`, `PrintBold.otf`) for educational tracing.
-
-For more details, see the [Design System Documentation](docs/DESIGN.md).
-
----
-
-## 📱 Mobile & Physical Device Testing
-
-Since the application adapts dynamically to wide desktop viewports (split-pane controls/preview) and mobile viewports (tabbed settings/preview), testing on physical devices is critical.
-
-For step-by-step setup guides:
-- See the [Android Device Testing Guide](docs/ANDROID_DEVICE_TESTING.md).
-- See the [Play Store Launch Guide](docs/PLAYSTORE_LAUNCH.md).
+- **`lib/services/pdf_service.dart`**: Stateless service drawing vector paths onto low-level PDF canvases for clean 300 DPI A4 printing.
 
 ---
 
@@ -111,7 +113,7 @@ We are always looking for improvements and additions! Please read the [Contribut
 If **Learn Loop** makes generating toddler educational worksheets seamless and saves you time:
 - ⭐ **Star this repository** to help others discover the project.
 - 📣 **Spread the word** on X/Twitter or your blog.
-- ☕ **Support the maintainer** via [donation](https://asifiqbal.rocks/donation) to fund further open-source initiatives.
+- ☕ **Support the maintainer** via [donation](https://asifiqbal.rocks/donation?utm_source=learn_loop&utm_medium=github_readme&utm_campaign=readme&ref=learn-loop-readme) to fund further open-source initiatives.
 
 ---
 

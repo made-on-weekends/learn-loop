@@ -43,7 +43,7 @@ class LearnLoopApp extends StatelessWidget {
           activeTrackColor: const Color(0xFF6366F1),
           thumbColor: const Color(0xFF6366F1),
           inactiveTrackColor: Colors.grey.shade300,
-          overlayColor: const Color(0xFF6366F1).withOpacity(0.12),
+          overlayColor: const Color(0xFF6366F1).withValues(alpha: 0.12),
         ),
         segmentedButtonTheme: SegmentedButtonThemeData(
           style: ButtonStyle(

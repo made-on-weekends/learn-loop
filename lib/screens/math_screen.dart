@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/global_config.dart';
 import '../models/math_config.dart';
 import '../services/pdf_service.dart';
+import '../widgets/page_margin_dropdown.dart';
 import '../widgets/worksheet_editor_layout.dart';
 
 class MathScreen extends StatefulWidget {
@@ -87,27 +88,14 @@ class _MathScreenState extends State<MathScreen> {
               ),
             ],
           ),
-          Slider(
+          const SizedBox(height: 12),
+          PageMarginDropdown(
             value: _globalConfig.marginMm,
-            min: 5.0,
-            max: 30.0,
-            divisions: 5,
-            label: "Margin: ${_globalConfig.marginMm.toInt()} mm",
             onChanged: (val) {
               setState(() {
                 _globalConfig.marginMm = val;
               });
             },
-          ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 12.0),
-              child: Text(
-                "Page Margin: ${_globalConfig.marginMm.toInt()} mm",
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-              ),
-            ),
           ),
           const Divider(height: 32),
 

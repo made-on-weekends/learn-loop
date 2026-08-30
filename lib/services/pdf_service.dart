@@ -6,10 +6,13 @@ import 'package:pdf/widgets.dart' as pw;
 
 import '../models/global_config.dart';
 import '../models/handwriting_config.dart';
+import '../models/handwriting_line_style.dart';
+import '../models/kid_profile.dart';
 import '../models/counting_config.dart';
 import '../models/math_config.dart';
 import '../models/prewriting_config.dart';
 import '../models/shapes_config.dart';
+import 'settings_service.dart';
 
 class PdfService {
   // Constants for conversion
@@ -160,10 +163,17 @@ class PdfService {
   // ==========================================
   // 1. HANDWRITING PRACTICE GENERATOR
   // ==========================================
+  // ==========================================
+  // 1. HANDWRITING PRACTICE GENERATOR
+  // ==========================================
   static Future<Uint8List> generateHandwriting(
     GlobalConfig global,
-    HandwritingConfig config,
-  ) async {
+    HandwritingConfig config, {
+    KidProfile? kidProfile,
+  }) async {
+    final profile = kidProfile ?? SettingsService.currentKidProfile;
+    final styleDef = config.getEffectiveLineStyle(profile).definition;
+
     final pdf = pw.Document();
     final fonts = await _loadFonts();
     final pw.Font solidFont = fonts['regular']!;
@@ -176,24 +186,16 @@ class PdfService {
 
     final double printableWidth = PdfPageFormat.a4.width - 2 * margin;
     final double headerHeight = global.showHeader ? 75.0 : 0.0;
-    final double printableHeight = PdfPageFormat.a4.height - 2 * margin - headerHeight - 40.0;
+    final double printableHeight = PdfPageFormat.a4.height - 2 * margin - headerHeight - 20.0;
 
-    // Resolve fonts first so we can derive rowHeight from real font metrics.
-    // This ensures the row height is always consistent with the guideline positions
-    // computed inside _drawHandwritingRow / _drawHandwritingColumnRow.
+    final double fontSize = config.getEffectiveFontSizePt(profile);
+    final double rowHeight = config.getEffectiveRowHeightPt(profile);
+
     final dummyContext = pw.Context(document: pdf.document);
     final PdfFont pdfSolid = solidFont.getFont(dummyContext);
     final PdfFont pdfDotted = dottedFont.getFont(dummyContext);
     final PdfFont pdfTrace = config.dottedFont ? pdfDotted : pdfSolid;
     final PdfFont measureFont = config.mode == PracticeMode.tracing ? pdfTrace : pdfSolid;
-
-    // Derive row height from the actual font glyph box (ascent − descent) plus
-    // vertical padding so guidelines are never clipped by the row boundary.
-    final double fontAscent  = measureFont.ascent  * config.fontSize;  // positive
-    final double fontDescent = measureFont.descent * config.fontSize;  // negative
-    final double glyphHeight = fontAscent - fontDescent;
-    // Padding = 40 % of glyph height so top/bottom guide lines have visual margin
-    final double rowHeight   = glyphHeight * 1.4;
 
     int rowsPerPage = (printableHeight / rowHeight).floor();
     if (rowsPerPage < 1) rowsPerPage = 1;
@@ -201,11 +203,11 @@ class PdfService {
     // Calculate global dynamic column sizing parameters across all items to ensure page-to-page consistency
     double globalMaxItemWidth = 0.0;
     for (var item in items) {
-      double w = measureFont.stringMetrics(item).size.x * config.fontSize;
+      double w = measureFont.stringMetrics(item).size.x * fontSize;
       if (w > globalMaxItemWidth) globalMaxItemWidth = w;
     }
-    double globalCellPadding = config.fontSize * 0.8;
-    double globalCellWidth = math.max(globalMaxItemWidth + globalCellPadding, config.fontSize * 1.8);
+    double globalCellPadding = fontSize * 0.8;
+    double globalCellWidth = math.max(globalMaxItemWidth + globalCellPadding, fontSize * 1.8);
     int globalColsCount = (printableWidth / globalCellWidth).floor();
     if (globalColsCount < 1) globalColsCount = 1;
     globalCellWidth = printableWidth / globalColsCount;
@@ -237,6 +239,7 @@ class PdfService {
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
                   _buildHeader(global, boldFont, "Handwriting Practice"),
+                  if (global.showHeader) pw.SizedBox(height: 8),
                   pw.Column(
                     children: List.generate(capturedPageItems.length, (rIndex) {
                       final String item = capturedPageItems[rIndex];
@@ -249,10 +252,13 @@ class PdfService {
                             item,
                             localSolid,
                             localDotted,
-                            config.fontSize,
+                            fontSize,
                             capturedColsCount,
                             capturedCellWidth,
                             config,
+                            global,
+                            styleDef,
+                            isLastRow: rIndex == capturedPageItems.length - 1,
                           );
                         },
                       );
@@ -292,6 +298,7 @@ class PdfService {
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
                   _buildHeader(global, boldFont, "Handwriting Practice"),
+                  if (global.showHeader) pw.SizedBox(height: 8),
                   pw.Column(
                     children: List.generate(rowsPerPage, (rIndex) {
                       return pw.CustomPaint(
@@ -303,10 +310,13 @@ class PdfService {
                             capturedPageItems,
                             localSolid,
                             localDotted,
-                            config.fontSize,
+                            fontSize,
                             capturedCellWidth,
                             rIndex,
                             config,
+                            global,
+                            styleDef,
+                            isLastRow: rIndex == rowsPerPage - 1,
                           );
                         },
                       );
@@ -324,7 +334,6 @@ class PdfService {
   }
 
   // Draw a full-width handwriting row with guidelines spanning entire row width (row-direction mode).
-  // Each row has one letter repeated across all columns.
   static void _drawHandwritingRow(
     PdfGraphics canvas,
     PdfPoint size,
@@ -335,64 +344,83 @@ class PdfService {
     int colsCount,
     double cellWidth,
     HandwritingConfig config,
-  ) {
+    GlobalConfig global,
+    HandwritingStyleDefinition styleDef, {
+    bool isLastRow = false,
+  }) {
     final double width = size.x;
     final double height = size.y;
 
-    // Use the dotted font (tracing font) for metric calculations since that's what
-    // the student writes against. Fall back to solid font for copy mode.
-    final PdfFont metricFont = config.mode == PracticeMode.tracing ? dottedFont : solidFont;
+    final double descenderBuffer = height * 0.5;
+    final double writingHeight = height * 0.5;
+    final double midlineFromBaseline = writingHeight * 0.5;
 
-    // Font metric-based guideline positions.
-    // PdfFont.ascent is a positive fraction, .descent is negative.
-    final double ascent  = metricFont.ascent  * fontSize;  // distance above baseline to top of caps
-    final double descent = metricFont.descent * fontSize;  // negative, below baseline
+    final double baselineY   = descenderBuffer;
+    final double midLineY    = baselineY + midlineFromBaseline;
+    final double topLineY    = baselineY + writingHeight;
+    final double separatorY  = descenderBuffer * 0.5;
+    final double bottomLineY = 0.0;
 
-    // Center the full glyph box (ascent + |descent|) vertically in the row
-    final double glyphHeight = ascent - descent; // total glyph box
-    final double baselineY = (height - glyphHeight) / 2 - descent; // PDF Y=0 at bottom
+    final bool isZanerBloser = config.colorScheme == GuidelineColorScheme.zanerBloser;
+    final PdfColor redColor = isZanerBloser ? PdfColor.fromHex('#E53935') : PdfColors.grey500;
+    final PdfColor blueColor = isZanerBloser ? PdfColor.fromHex('#1E88E5') : PdfColors.grey400;
+    final PdfColor blackColor = isZanerBloser ? PdfColor.fromHex('#1A1A1A') : PdfColors.grey700;
 
-    // Guideline positions derived from font metrics
-    final double topLineY    = baselineY + ascent;                 // top of uppercase / ascenders
-    final double midLineY    = baselineY + ascent * 0.55;          // x-height (approx 55% of ascent)
-    final double bottomLineY = baselineY + descent;                // bottom of descenders (g, y, p)
-
-    // 1. Draw full-width guidelines
     canvas.saveContext();
 
+    // 1. Left Vertical Margin Red Line (0.75" margin guide at left margin boundary)
+    if (global.showRedMarginLine && config.showRedMarginLine) {
+      canvas.setStrokeColor(redColor);
+      canvas.setLineWidth(1.0);
+      canvas.drawLine(0, 0, 0, height);
+      canvas.strokePath();
+    }
+
+    // 2. Horizontal Guidelines
+    // Line 1: Headline (Top Line) - Solid Red Line
     if (config.showTopLine) {
-      canvas.setStrokeColor(PdfColors.grey500);
-      canvas.setLineWidth(0.5);
+      canvas.setStrokeColor(redColor);
+      canvas.setLineWidth(0.7);
       canvas.drawLine(0, topLineY, width, topLineY);
       canvas.strokePath();
     }
 
-    if (config.showMidLine) {
-      canvas.setStrokeColor(PdfColors.grey400);
-      canvas.setLineWidth(0.5);
+    // Line 2: Midline (Center) - Dashed/Dotted Blue Line (only for 3-line styles)
+    if (styleDef.hasMiddleGuide && config.showMidLine) {
+      canvas.setStrokeColor(blueColor);
+      canvas.setLineWidth(0.6);
       canvas.setLineDashPattern([3, 3], 0);
       canvas.drawLine(0, midLineY, width, midLineY);
       canvas.strokePath();
       canvas.setLineDashPattern([], 0);
     }
 
+    // Line 3: Baseline (Bottom) - Thick Solid Black Line
     if (config.showBaseLine) {
-      canvas.setStrokeColor(PdfColors.grey700);
-      canvas.setLineWidth(0.8);
+      canvas.setStrokeColor(blackColor);
+      canvas.setLineWidth(1.2);
       canvas.drawLine(0, baselineY, width, baselineY);
       canvas.strokePath();
     }
 
-    if (config.showBottomLine) {
-      canvas.setStrokeColor(PdfColors.grey500);
-      canvas.setLineWidth(0.5);
+    // Separator line centered in descender gap (equal gap above baseline and below next headline)
+    canvas.setStrokeColor(PdfColors.grey500);
+    canvas.setLineWidth(0.8);
+    canvas.setLineDashPattern([4, 3], 0);
+    canvas.drawLine(0, separatorY, width, separatorY);
+    canvas.strokePath();
+    canvas.setLineDashPattern([], 0);
+
+    if (config.showBottomLine && isLastRow) {
+      canvas.setStrokeColor(isZanerBloser ? PdfColor.fromHex('#E53935') : PdfColors.grey500);
+      canvas.setLineWidth(0.7);
       canvas.drawLine(0, bottomLineY, width, bottomLineY);
       canvas.strokePath();
     }
 
     canvas.restoreContext();
 
-    // 2. Draw text at each cell position
+    // 3. Draw text at each cell position
     for (int cIndex = 0; cIndex < colsCount; cIndex++) {
       bool isEmpty = false;
       PdfFont font;
@@ -412,18 +440,32 @@ class PdfService {
 
       if (!isEmpty && text.isNotEmpty) {
         canvas.saveContext();
-        final double textWidth = font.stringMetrics(text).size.x * fontSize;
+        // Dynamically compute font size based on actual writing height and visual cap height ratio
+        final double capHeightRatio = HandwritingConfig.fontCapHeightRatio;
+        final double rowFontSize = writingHeight / capHeightRatio;
+        final double fontWidth = font.stringMetrics(text).size.x;
+        double effectiveFontSize = rowFontSize;
+
+        // Auto-scale font size only for longer custom text phrases if text width exceeds cell width
+        if (text.length > 2) {
+          final double maxAllowedWidth = cellWidth - 4.0;
+          if (fontWidth * effectiveFontSize > maxAllowedWidth && fontWidth > 0) {
+            effectiveFontSize = maxAllowedWidth / fontWidth;
+          }
+        }
+
+        final double textWidth = fontWidth * effectiveFontSize;
         final double cellStartX = cIndex * cellWidth;
         final double startX = cellStartX + (cellWidth - textWidth) / 2;
+        final double drawY = baselineY + (HandwritingConfig.fontBaselineOffsetRatio * effectiveFontSize);
         canvas.setFillColor(PdfColors.black);
-        _drawText(canvas, font, fontSize, text, startX, baselineY);
+        _drawText(canvas, font, effectiveFontSize, text, startX, drawY);
         canvas.restoreContext();
       }
     }
   }
 
   // Draw a full-width handwriting row for column-direction mode.
-  // Each column has a different letter; rIndex determines if solid or dotted (copy mode).
   static void _drawHandwritingColumnRow(
     PdfGraphics canvas,
     PdfPoint size,
@@ -434,33 +476,49 @@ class PdfService {
     double cellWidth,
     int rIndex,
     HandwritingConfig config,
-  ) {
+    GlobalConfig global,
+    HandwritingStyleDefinition styleDef, {
+    bool isLastRow = false,
+  }) {
     final double width = size.x;
     final double height = size.y;
 
-    // Font metric-based guideline positions (same logic as _drawHandwritingRow)
-    final PdfFont metricFont = config.mode == PracticeMode.tracing ? dottedFont : solidFont;
-    final double ascent  = metricFont.ascent  * fontSize;
-    final double descent = metricFont.descent * fontSize;
-    final double glyphHeight = ascent - descent;
-    final double baselineY = (height - glyphHeight) / 2 - descent;
-    final double topLineY    = baselineY + ascent;
-    final double midLineY    = baselineY + ascent * 0.55;
-    final double bottomLineY = baselineY + descent;
+    final double descenderBuffer = height * 0.5;
+    final double writingHeight = height * 0.5;
+    final double midlineFromBaseline = writingHeight * 0.5;
 
-    // 1. Draw full-width guidelines
+    final double baselineY   = descenderBuffer;
+    final double midLineY    = baselineY + midlineFromBaseline;
+    final double topLineY    = baselineY + writingHeight;
+    final double separatorY  = descenderBuffer * 0.5;
+    final double bottomLineY = 0.0;
+
+    final bool isZanerBloser = config.colorScheme == GuidelineColorScheme.zanerBloser;
+    final PdfColor redColor = isZanerBloser ? PdfColor.fromHex('#E53935') : PdfColors.grey500;
+    final PdfColor blueColor = isZanerBloser ? PdfColor.fromHex('#1E88E5') : PdfColors.grey400;
+    final PdfColor blackColor = isZanerBloser ? PdfColor.fromHex('#1A1A1A') : PdfColors.grey700;
+
     canvas.saveContext();
 
+    // 1. Left Vertical Margin Red Line
+    if (global.showRedMarginLine && config.showRedMarginLine) {
+      canvas.setStrokeColor(redColor);
+      canvas.setLineWidth(1.0);
+      canvas.drawLine(0, 0, 0, height);
+      canvas.strokePath();
+    }
+
+    // 2. Horizontal Guidelines
     if (config.showTopLine) {
-      canvas.setStrokeColor(PdfColors.grey500);
-      canvas.setLineWidth(0.5);
+      canvas.setStrokeColor(redColor);
+      canvas.setLineWidth(0.7);
       canvas.drawLine(0, topLineY, width, topLineY);
       canvas.strokePath();
     }
 
-    if (config.showMidLine) {
-      canvas.setStrokeColor(PdfColors.grey400);
-      canvas.setLineWidth(0.5);
+    if (styleDef.hasMiddleGuide && config.showMidLine) {
+      canvas.setStrokeColor(blueColor);
+      canvas.setLineWidth(0.6);
       canvas.setLineDashPattern([3, 3], 0);
       canvas.drawLine(0, midLineY, width, midLineY);
       canvas.strokePath();
@@ -468,22 +526,30 @@ class PdfService {
     }
 
     if (config.showBaseLine) {
-      canvas.setStrokeColor(PdfColors.grey700);
-      canvas.setLineWidth(0.8);
+      canvas.setStrokeColor(blackColor);
+      canvas.setLineWidth(1.2);
       canvas.drawLine(0, baselineY, width, baselineY);
       canvas.strokePath();
     }
 
-    if (config.showBottomLine) {
-      canvas.setStrokeColor(PdfColors.grey500);
-      canvas.setLineWidth(0.5);
+    // Separator line centered in descender gap (equal gap above baseline and below next headline)
+    canvas.setStrokeColor(PdfColors.grey500);
+    canvas.setLineWidth(0.8);
+    canvas.setLineDashPattern([4, 3], 0);
+    canvas.drawLine(0, separatorY, width, separatorY);
+    canvas.strokePath();
+    canvas.setLineDashPattern([], 0);
+
+    if (config.showBottomLine && isLastRow) {
+      canvas.setStrokeColor(isZanerBloser ? PdfColor.fromHex('#E53935') : PdfColors.grey500);
+      canvas.setLineWidth(0.7);
       canvas.drawLine(0, bottomLineY, width, bottomLineY);
       canvas.strokePath();
     }
 
     canvas.restoreContext();
 
-    // 2. Draw text at each column position
+    // 3. Draw text at each column position
     for (int cIndex = 0; cIndex < columnItems.length; cIndex++) {
       final String item = columnItems[cIndex];
       bool isEmpty = false;
@@ -504,11 +570,26 @@ class PdfService {
 
       if (!isEmpty && item.isNotEmpty) {
         canvas.saveContext();
-        final double textWidth = font.stringMetrics(item).size.x * fontSize;
+        // Dynamically compute font size based on actual writing height and visual cap height ratio
+        final double capHeightRatio = HandwritingConfig.fontCapHeightRatio;
+        final double rowFontSize = writingHeight / capHeightRatio;
+        final double fontWidth = font.stringMetrics(item).size.x;
+        double effectiveFontSize = rowFontSize;
+
+        // Auto-scale font size only for longer custom text phrases if text width exceeds cell width
+        if (item.length > 2) {
+          final double maxAllowedWidth = cellWidth - 4.0;
+          if (fontWidth * effectiveFontSize > maxAllowedWidth && fontWidth > 0) {
+            effectiveFontSize = maxAllowedWidth / fontWidth;
+          }
+        }
+
+        final double textWidth = fontWidth * effectiveFontSize;
         final double cellStartX = cIndex * cellWidth;
         final double startX = cellStartX + (cellWidth - textWidth) / 2;
+        final double drawY = baselineY + (HandwritingConfig.fontBaselineOffsetRatio * effectiveFontSize);
         canvas.setFillColor(PdfColors.black);
-        _drawText(canvas, font, fontSize, item, startX, baselineY);
+        _drawText(canvas, font, effectiveFontSize, item, startX, drawY);
         canvas.restoreContext();
       }
     }
