@@ -78,26 +78,14 @@ class KidProfile {
   final int age;
   final KidGrade grade;
 
-  const KidProfile({
-    this.age = 4,
-    this.grade = KidGrade.nursery,
-  });
+  const KidProfile({this.age = 4, this.grade = KidGrade.nursery});
 
-  KidProfile copyWith({
-    int? age,
-    KidGrade? grade,
-  }) {
-    return KidProfile(
-      age: age ?? this.age,
-      grade: grade ?? this.grade,
-    );
+  KidProfile copyWith({int? age, KidGrade? grade}) {
+    return KidProfile(age: age ?? this.age, grade: grade ?? this.grade);
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'age': age,
-      'grade': grade.name,
-    };
+    return {'age': age, 'grade': grade.name};
   }
 
   factory KidProfile.fromJson(Map<String, dynamic> json) {

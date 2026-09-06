@@ -19,15 +19,24 @@ void main() {
       expect(ps.lineStyle, equals(HandwritingLineStyle.twoLineSeparated));
       expect(ps.rowHeightMm, equals(18.0));
 
-      final nursery = HandwritingDefaultsResolver.resolve(grade: KidGrade.nursery);
-      expect(nursery.lineStyle, equals(HandwritingLineStyle.threeLineSeparated));
+      final nursery = HandwritingDefaultsResolver.resolve(
+        grade: KidGrade.nursery,
+      );
+      expect(
+        nursery.lineStyle,
+        equals(HandwritingLineStyle.threeLineSeparated),
+      );
       expect(nursery.rowHeightMm, equals(17.0));
 
-      final kg = HandwritingDefaultsResolver.resolve(grade: KidGrade.kindergarten);
+      final kg = HandwritingDefaultsResolver.resolve(
+        grade: KidGrade.kindergarten,
+      );
       expect(kg.lineStyle, equals(HandwritingLineStyle.threeLine));
       expect(kg.rowHeightMm, equals(14.0));
 
-      final hs = HandwritingDefaultsResolver.resolve(grade: KidGrade.homeschool);
+      final hs = HandwritingDefaultsResolver.resolve(
+        grade: KidGrade.homeschool,
+      );
       expect(hs.lineStyle, equals(HandwritingLineStyle.threeLine));
       expect(hs.rowHeightMm, equals(14.0));
 
@@ -39,7 +48,9 @@ void main() {
       expect(g2.lineStyle, equals(HandwritingLineStyle.threeLine));
       expect(g2.rowHeightMm, equals(10.5));
 
-      final g3 = HandwritingDefaultsResolver.resolve(grade: KidGrade.grade3Plus);
+      final g3 = HandwritingDefaultsResolver.resolve(
+        grade: KidGrade.grade3Plus,
+      );
       expect(g3.lineStyle, equals(HandwritingLineStyle.threeLine));
       expect(g3.rowHeightMm, equals(9.0));
     });
@@ -78,7 +89,10 @@ void main() {
       final profile = const KidProfile(age: 4, grade: KidGrade.nursery);
       final config = HandwritingConfig();
 
-      expect(config.getEffectiveLineStyle(profile), equals(HandwritingLineStyle.threeLineSeparated));
+      expect(
+        config.getEffectiveLineStyle(profile),
+        equals(HandwritingLineStyle.threeLineSeparated),
+      );
       expect(config.getEffectiveRowHeightMm(profile), equals(17.0));
     });
 
@@ -89,24 +103,33 @@ void main() {
       config.lineStyleOverride = HandwritingLineStyle.twoLine;
       config.rowHeightMmOverride = 22.5;
 
-      expect(config.getEffectiveLineStyle(profile), equals(HandwritingLineStyle.twoLine));
+      expect(
+        config.getEffectiveLineStyle(profile),
+        equals(HandwritingLineStyle.twoLine),
+      );
       expect(config.getEffectiveRowHeightMm(profile), equals(22.5));
     });
 
-    test('resetOverrides removes explicit overrides back to global profile defaults', () {
-      final profile = const KidProfile(age: 5, grade: KidGrade.kindergarten);
-      final config = HandwritingConfig();
+    test(
+      'resetOverrides removes explicit overrides back to global profile defaults',
+      () {
+        final profile = const KidProfile(age: 5, grade: KidGrade.kindergarten);
+        final config = HandwritingConfig();
 
-      config.lineStyleOverride = HandwritingLineStyle.twoLineSeparated;
-      config.rowHeightMmOverride = 25.0;
+        config.lineStyleOverride = HandwritingLineStyle.twoLineSeparated;
+        config.rowHeightMmOverride = 25.0;
 
-      config.resetOverrides();
+        config.resetOverrides();
 
-      expect(config.lineStyleOverride, isNull);
-      expect(config.rowHeightMmOverride, isNull);
-      expect(config.getEffectiveLineStyle(profile), equals(HandwritingLineStyle.threeLine));
-      expect(config.getEffectiveRowHeightMm(profile), equals(14.0));
-    });
+        expect(config.lineStyleOverride, isNull);
+        expect(config.rowHeightMmOverride, isNull);
+        expect(
+          config.getEffectiveLineStyle(profile),
+          equals(HandwritingLineStyle.threeLine),
+        );
+        expect(config.getEffectiveRowHeightMm(profile), equals(14.0));
+      },
+    );
   });
 
   group('KidProfile Persistence Tests', () {

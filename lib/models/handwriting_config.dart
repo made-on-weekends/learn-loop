@@ -2,10 +2,25 @@ import 'kid_profile.dart';
 import 'handwriting_line_style.dart';
 import '../services/handwriting_defaults_resolver.dart';
 
-enum HandwritingSource { alphabetUpper, alphabetLower, numbers, customText }
+enum HandwritingSource {
+  alphabetUpper,
+  alphabetLower,
+  alphabetBoth,
+  numbers,
+  caseMatching,
+  alphabetSequence,
+  beginningSounds,
+  cvcWords,
+  sightWords,
+  customText,
+}
+
 enum PracticeMode { tracing, copy }
+
 enum PracticeDirection { row, column }
+
 enum GradeLevel { kindergarten, grade1, grade2, grade3, custom }
+
 enum GuidelineColorScheme { zanerBloser, monochrome }
 
 extension GradeLevelExtension on GradeLevel {
@@ -67,6 +82,8 @@ class HandwritingConfig {
   PracticeMode mode;
   PracticeDirection direction;
   bool dottedFont;
+  bool cvcMissingVowel;
+  int? seed;
 
   // Grade level preset & guidelines config
   GradeLevel gradeLevel;
@@ -101,6 +118,8 @@ class HandwritingConfig {
     this.mode = PracticeMode.tracing,
     this.direction = PracticeDirection.row,
     this.dottedFont = true,
+    this.cvcMissingVowel = false,
+    this.seed,
     this.gradeLevel = GradeLevel.kindergarten,
     this.colorScheme = GuidelineColorScheme.zanerBloser,
     this.showTopLine = true,
@@ -118,14 +137,18 @@ class HandwritingConfig {
     if (lineStyleOverride != null) {
       return lineStyleOverride!;
     }
-    return HandwritingDefaultsResolver.resolve(kidProfile: kidProfile).lineStyle;
+    return HandwritingDefaultsResolver.resolve(
+      kidProfile: kidProfile,
+    ).lineStyle;
   }
 
   double getEffectiveRowHeightMm(KidProfile kidProfile) {
     if (rowHeightMmOverride != null) {
       return rowHeightMmOverride!;
     }
-    return HandwritingDefaultsResolver.resolve(kidProfile: kidProfile).rowHeightMm;
+    return HandwritingDefaultsResolver.resolve(
+      kidProfile: kidProfile,
+    ).rowHeightMm;
   }
 
   double getEffectiveRowHeightPt(KidProfile kidProfile) {
@@ -161,16 +184,19 @@ class HandwritingConfig {
     }
   }
 
-  double get effectiveWritingHeightPt =>
-      gradeLevel == GradeLevel.custom ? fontSize : gradeLevel.defaultWritingHeightPt;
+  double get effectiveWritingHeightPt => gradeLevel == GradeLevel.custom
+      ? fontSize
+      : gradeLevel.defaultWritingHeightPt;
 
-  double get effectiveFontSizePt => effectiveWritingHeightPt / fontCapHeightRatio;
+  double get effectiveFontSizePt =>
+      effectiveWritingHeightPt / fontCapHeightRatio;
 
   double get effectiveMidlineFromBaselinePt => effectiveWritingHeightPt * 0.5;
 
   double get effectiveDescenderBufferPt => effectiveWritingHeightPt * 0.5;
 
-  double get effectiveTotalRowHeightPt => effectiveWritingHeightPt + effectiveDescenderBufferPt;
+  double get effectiveTotalRowHeightPt =>
+      effectiveWritingHeightPt + effectiveDescenderBufferPt;
 
   void resetOverrides() {
     lineStyleOverride = null;

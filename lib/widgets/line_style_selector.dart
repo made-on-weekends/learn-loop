@@ -46,7 +46,10 @@ class _LineStyleSelectorState extends State<LineStyleSelector> {
             },
             borderRadius: BorderRadius.circular(16),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 12.0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -55,7 +58,9 @@ class _LineStyleSelectorState extends State<LineStyleSelector> {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.1,
+                          ),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -80,14 +85,16 @@ class _LineStyleSelectorState extends State<LineStyleSelector> {
                             Text(
                               selectedDef.hasMiddleGuide
                                   ? (selectedDef.hasSeparator
-                                      ? "3-line system with midline guide & descender space"
-                                      : "3-line continuous system with midline guide")
+                                        ? "3-line system with midline guide & descender space"
+                                        : "3-line continuous system with midline guide")
                                   : (selectedDef.hasSeparator
-                                      ? "2-line headline & baseline with descender space"
-                                      : "2-line simple headline & baseline"),
+                                        ? "2-line headline & baseline with descender space"
+                                        : "2-line simple headline & baseline"),
                               style: TextStyle(
                                 fontSize: 11,
-                                color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.65,
+                                ),
                               ),
                             ),
                           ],
@@ -100,12 +107,17 @@ class _LineStyleSelectorState extends State<LineStyleSelector> {
                           });
                         },
                         icon: Icon(
-                          _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                          _isExpanded
+                              ? Icons.keyboard_arrow_up
+                              : Icons.keyboard_arrow_down,
                           size: 18,
                         ),
                         label: Text(
                           _isExpanded ? "Collapse" : "Change",
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         style: TextButton.styleFrom(
                           visualDensity: VisualDensity.compact,
@@ -119,13 +131,14 @@ class _LineStyleSelectorState extends State<LineStyleSelector> {
                   Container(
                     height: 52,
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: Colors.grey.shade300,
-                      ),
+                      border: Border.all(color: Colors.grey.shade300),
                     ),
                     child: CustomPaint(
                       painter: _ExpandedLineStylePainter(
@@ -178,7 +191,9 @@ class _LineStyleSelectorState extends State<LineStyleSelector> {
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? theme.colorScheme.primary.withValues(alpha: 0.06)
+                                ? theme.colorScheme.primary.withValues(
+                                    alpha: 0.06,
+                                  )
                                 : theme.colorScheme.surfaceContainerLow,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
@@ -208,7 +223,9 @@ class _LineStyleSelectorState extends State<LineStyleSelector> {
                                       def.label,
                                       style: TextStyle(
                                         fontSize: 13,
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                        fontWeight: isSelected
+                                            ? FontWeight.bold
+                                            : FontWeight.w600,
                                         color: isSelected
                                             ? theme.colorScheme.primary
                                             : theme.colorScheme.onSurface,
@@ -216,21 +233,31 @@ class _LineStyleSelectorState extends State<LineStyleSelector> {
                                     ),
                                   ),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: isSelected
-                                          ? theme.colorScheme.primary.withValues(alpha: 0.15)
-                                          : theme.colorScheme.surfaceContainerHighest,
+                                          ? theme.colorScheme.primary
+                                                .withValues(alpha: 0.15)
+                                          : theme
+                                                .colorScheme
+                                                .surfaceContainerHighest,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
-                                      def.hasSeparator ? "With Descender Gap" : "Continuous Shared",
+                                      def.hasSeparator
+                                          ? "With Descender Gap"
+                                          : "Continuous Shared",
                                       style: TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w600,
                                         color: isSelected
                                             ? theme.colorScheme.primary
-                                            : theme.colorScheme.onSurfaceVariant,
+                                            : theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
                                       ),
                                     ),
                                   ),
@@ -241,7 +268,10 @@ class _LineStyleSelectorState extends State<LineStyleSelector> {
                               Container(
                                 height: 56,
                                 width: double.infinity,
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(8),
@@ -287,22 +317,26 @@ class _ExpandedLineStylePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final guidePaint = Paint()
-      ..color = const Color(0xFFEF4444) // Red Headline
+      ..color =
+          const Color(0xFFEF4444) // Red Headline
       ..strokeWidth = 1.2
       ..style = PaintingStyle.stroke;
 
     final basePaint = Paint()
-      ..color = const Color(0xFF1E293B) // Dark Baseline
+      ..color =
+          const Color(0xFF1E293B) // Dark Baseline
       ..strokeWidth = 1.6
       ..style = PaintingStyle.stroke;
 
     final midPaint = Paint()
-      ..color = const Color(0xFF3B82F6) // Blue Midline
+      ..color =
+          const Color(0xFF3B82F6) // Blue Midline
       ..strokeWidth = 1.1
       ..style = PaintingStyle.stroke;
 
     final sepPaint = Paint()
-      ..color = const Color(0xFF94A3B8) // Slate Separator
+      ..color =
+          const Color(0xFF94A3B8) // Slate Separator
       ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
 
@@ -327,8 +361,22 @@ class _ExpandedLineStylePainter extends CustomPainter {
 
       // Midlines if 3-line
       if (definition.hasMiddleGuide) {
-        _drawDashedLine(canvas, Offset(0, r1Mid), Offset(width, r1Mid), midPaint, dashWidth: 4, dashSpace: 3);
-        _drawDashedLine(canvas, Offset(0, r2Mid), Offset(width, r2Mid), midPaint, dashWidth: 4, dashSpace: 3);
+        _drawDashedLine(
+          canvas,
+          Offset(0, r1Mid),
+          Offset(width, r1Mid),
+          midPaint,
+          dashWidth: 4,
+          dashSpace: 3,
+        );
+        _drawDashedLine(
+          canvas,
+          Offset(0, r2Mid),
+          Offset(width, r2Mid),
+          midPaint,
+          dashWidth: 4,
+          dashSpace: 3,
+        );
       }
 
       // Shared line between Row 1 and Row 2
@@ -357,30 +405,63 @@ class _ExpandedLineStylePainter extends CustomPainter {
       // Draw Row 1
       canvas.drawLine(Offset(0, r1Top), Offset(width, r1Top), guidePaint);
       if (definition.hasMiddleGuide) {
-        _drawDashedLine(canvas, Offset(0, r1Mid), Offset(width, r1Mid), midPaint, dashWidth: 4, dashSpace: 3);
+        _drawDashedLine(
+          canvas,
+          Offset(0, r1Mid),
+          Offset(width, r1Mid),
+          midPaint,
+          dashWidth: 4,
+          dashSpace: 3,
+        );
       }
       canvas.drawLine(Offset(0, r1Base), Offset(width, r1Base), basePaint);
 
       // Draw Separator Line (dotted line)
-      _drawDashedLine(canvas, Offset(0, sepY), Offset(width, sepY), sepPaint, dashWidth: 3, dashSpace: 3);
+      _drawDashedLine(
+        canvas,
+        Offset(0, sepY),
+        Offset(width, sepY),
+        sepPaint,
+        dashWidth: 3,
+        dashSpace: 3,
+      );
 
       // Draw Row 2
       canvas.drawLine(Offset(0, r2Top), Offset(width, r2Top), guidePaint);
       if (definition.hasMiddleGuide) {
-        _drawDashedLine(canvas, Offset(0, r2Mid), Offset(width, r2Mid), midPaint, dashWidth: 4, dashSpace: 3);
+        _drawDashedLine(
+          canvas,
+          Offset(0, r2Mid),
+          Offset(width, r2Mid),
+          midPaint,
+          dashWidth: 4,
+          dashSpace: 3,
+        );
       }
       canvas.drawLine(Offset(0, r2Base), Offset(width, r2Base), basePaint);
     }
   }
 
-  void _drawDashedLine(Canvas canvas, Offset p1, Offset p2, Paint paint, {double dashWidth = 4, double dashSpace = 3}) {
+  void _drawDashedLine(
+    Canvas canvas,
+    Offset p1,
+    Offset p2,
+    Paint paint, {
+    double dashWidth = 4,
+    double dashSpace = 3,
+  }) {
     final maxDistance = (p2 - p1).distance;
     final direction = (p2 - p1) / maxDistance;
     double currentDistance = 0.0;
 
     while (currentDistance < maxDistance) {
       final start = p1 + direction * currentDistance;
-      final end = p1 + direction * (currentDistance + dashWidth < maxDistance ? currentDistance + dashWidth : maxDistance);
+      final end =
+          p1 +
+          direction *
+              (currentDistance + dashWidth < maxDistance
+                  ? currentDistance + dashWidth
+                  : maxDistance);
       canvas.drawLine(start, end, paint);
       currentDistance += dashWidth + dashSpace;
     }

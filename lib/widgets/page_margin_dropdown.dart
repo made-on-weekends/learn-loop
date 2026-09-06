@@ -52,10 +52,7 @@ class PageMarginDropdown extends StatelessWidget {
       items: presets.map((preset) {
         return DropdownMenuItem<double>(
           value: preset.mm,
-          child: Text(
-            preset.label,
-            style: const TextStyle(fontSize: 13),
-          ),
+          child: Text(preset.label, style: const TextStyle(fontSize: 13)),
         );
       }).toList(),
       onChanged: (val) {

@@ -79,7 +79,10 @@ class WorksheetEditorLayout extends StatelessWidget {
     if (isWide) {
       return Scaffold(
         appBar: AppBar(
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+          title: Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
           actions: actions,
         ),
         body: Row(
@@ -89,11 +92,16 @@ class WorksheetEditorLayout extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   border: Border(
-                    right: BorderSide(color: theme.dividerColor.withValues(alpha: 0.4)),
+                    right: BorderSide(
+                      color: theme.dividerColor.withValues(alpha: 0.4),
+                    ),
                   ),
                 ),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 16.0,
+                  ),
                   child: settingsWidget,
                 ),
               ),
@@ -101,7 +109,9 @@ class WorksheetEditorLayout extends StatelessWidget {
             Expanded(
               flex: 6,
               child: Container(
-                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                color: theme.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.3,
+                ),
                 padding: const EdgeInsets.all(16.0),
                 child: buildPreview(),
               ),
@@ -114,21 +124,20 @@ class WorksheetEditorLayout extends StatelessWidget {
         length: 2,
         child: Scaffold(
           appBar: AppBar(
-            title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             actions: actions,
             bottom: TabBar(
               tabs: const [
-                Tab(
-                  icon: Icon(Icons.tune),
-                  text: "Customize",
-                ),
-                Tab(
-                  icon: Icon(Icons.picture_as_pdf),
-                  text: "Preview & Print",
-                ),
+                Tab(icon: Icon(Icons.tune), text: "Customize"),
+                Tab(icon: Icon(Icons.picture_as_pdf), text: "Preview & Print"),
               ],
               labelColor: theme.colorScheme.primary,
-              unselectedLabelColor: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              unselectedLabelColor: theme.colorScheme.onSurface.withValues(
+                alpha: 0.6,
+              ),
             ),
           ),
           body: TabBarView(

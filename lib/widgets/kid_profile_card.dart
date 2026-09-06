@@ -6,11 +6,7 @@ class KidProfileCard extends StatelessWidget {
   final ValueChanged<KidProfile>? onChanged;
   final bool compact;
 
-  const KidProfileCard({
-    super.key,
-    this.onChanged,
-    this.compact = false,
-  });
+  const KidProfileCard({super.key, this.onChanged, this.compact = false});
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +55,9 @@ class KidProfileCard extends StatelessWidget {
                         Text(
                           "Sets default line spacing & grade level",
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.65,
+                            ),
                           ),
                         ),
                       ],
@@ -77,13 +75,13 @@ class KidProfileCard extends StatelessWidget {
                   labelText: "Age",
                   border: OutlineInputBorder(),
                   isDense: true,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                 ),
                 items: List.generate(11, (i) => i + 2).map((age) {
-                  return DropdownMenuItem(
-                    value: age,
-                    child: Text("$age yrs"),
-                  );
+                  return DropdownMenuItem(value: age, child: Text("$age yrs"));
                 }).toList(),
                 onChanged: (val) {
                   if (val != null) {
@@ -103,7 +101,10 @@ class KidProfileCard extends StatelessWidget {
                   labelText: "Grade",
                   border: OutlineInputBorder(),
                   isDense: true,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                 ),
                 items: KidGrade.values.map((grade) {
                   return DropdownMenuItem(

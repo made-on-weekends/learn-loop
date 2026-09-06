@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/global_config.dart';
 import '../models/math_config.dart';
 import '../services/pdf_service.dart';
+import '../services/random_seed_service.dart';
 import '../widgets/page_margin_dropdown.dart';
 import '../widgets/worksheet_editor_layout.dart';
 
@@ -47,6 +48,7 @@ class _MathScreenState extends State<MathScreen> {
           _sectionHeader("Page & Header"),
           const SizedBox(height: 12),
           TextFormField(
+            key: ValueKey(_globalConfig.title),
             initialValue: _globalConfig.title,
             decoration: const InputDecoration(
               labelText: "Worksheet Title",
@@ -60,7 +62,10 @@ class _MathScreenState extends State<MathScreen> {
             children: [
               Expanded(
                 child: CheckboxListTile(
-                  title: const Text("Name Line", style: TextStyle(fontSize: 13)),
+                  title: const Text(
+                    "Name Line",
+                    style: TextStyle(fontSize: 13),
+                  ),
                   value: _globalConfig.showNameLine,
                   dense: true,
                   contentPadding: EdgeInsets.zero,
@@ -74,7 +79,10 @@ class _MathScreenState extends State<MathScreen> {
               ),
               Expanded(
                 child: CheckboxListTile(
-                  title: const Text("Date Line", style: TextStyle(fontSize: 13)),
+                  title: const Text(
+                    "Date Line",
+                    style: TextStyle(fontSize: 13),
+                  ),
                   value: _globalConfig.showDateLine,
                   dense: true,
                   contentPadding: EdgeInsets.zero,
@@ -98,6 +106,65 @@ class _MathScreenState extends State<MathScreen> {
             },
           ),
           const Divider(height: 32),
+
+          _sectionHeader("Activity Mode"),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<MathActivityMode>(
+            initialValue: _mathConfig.activityMode,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: "Worksheet Style",
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+            items: const [
+              DropdownMenuItem(
+                value: MathActivityMode.standardEquations,
+                child: Text(
+                  "Standard Equations",
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              DropdownMenuItem(
+                value: MathActivityMode.numberLine,
+                child: Text(
+                  "Number Line Jump Guides",
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              DropdownMenuItem(
+                value: MathActivityMode.tenFrame,
+                child: Text(
+                  "Ten-Frame Grid Visualization",
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              DropdownMenuItem(
+                value: MathActivityMode.numberBonds,
+                child: Text(
+                  "Number Bonds (Part-Part-Whole)",
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+            onChanged: (val) {
+              if (val != null) {
+                setState(() {
+                  _mathConfig.activityMode = val;
+                  if (val == MathActivityMode.numberLine) {
+                    _globalConfig.title = "Number Line Math";
+                  } else if (val == MathActivityMode.tenFrame) {
+                    _globalConfig.title = "Ten-Frame Math";
+                  } else if (val == MathActivityMode.numberBonds) {
+                    _globalConfig.title = "Number Bonds Math";
+                  } else {
+                    _globalConfig.title = "Math Practice";
+                  }
+                });
+              }
+            },
+          ),
+          const SizedBox(height: 20),
 
           _sectionHeader("Operation"),
           const SizedBox(height: 12),
@@ -126,34 +193,88 @@ class _MathScreenState extends State<MathScreen> {
           ),
           const SizedBox(height: 20),
 
-          _sectionHeader("Equation Layout"),
-          const SizedBox(height: 12),
-          SegmentedButton<MathFormat>(
-            segments: const [
-              ButtonSegment(
-                value: MathFormat.vertical,
-                label: Text("Vertical"),
-                icon: Icon(Icons.view_agenda_outlined),
+          if (_mathConfig.activityMode ==
+              MathActivityMode.standardEquations) ...[
+            _sectionHeader("Equation Layout"),
+            const SizedBox(height: 12),
+            SegmentedButton<MathFormat>(
+              segments: const [
+                ButtonSegment(
+                  value: MathFormat.vertical,
+                  label: Text("Vertical"),
+                  icon: Icon(Icons.view_agenda_outlined),
+                ),
+                ButtonSegment(
+                  value: MathFormat.horizontal,
+                  label: Text("Horizontal"),
+                  icon: Icon(Icons.view_stream),
+                ),
+              ],
+              selected: {_mathConfig.format},
+              onSelectionChanged: (val) {
+                setState(() => _mathConfig.format = val.first);
+              },
+            ),
+            const SizedBox(height: 20),
+          ],
+
+          SwitchListTile(
+            title: const Text(
+              "Missing Term Questions",
+              style: TextStyle(fontSize: 14),
+            ),
+            subtitle: const Text(
+              "e.g., 3 + ___ = 5 or ___ + 2 = 5",
+              style: TextStyle(fontSize: 11),
+            ),
+            value: _mathConfig.missingTerm,
+            contentPadding: EdgeInsets.zero,
+            onChanged: (val) => setState(() => _mathConfig.missingTerm = val),
+          ),
+          const SizedBox(height: 16),
+
+          _sectionHeader("Number Range Presets"),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              ActionChip(
+                label: const Text("Sums ≤ 5"),
+                onPressed: () {
+                  setState(() {
+                    _mathConfig.minNumber = 1;
+                    _mathConfig.maxNumber = 5;
+                  });
+                },
               ),
-              ButtonSegment(
-                value: MathFormat.horizontal,
-                label: Text("Horizontal"),
-                icon: Icon(Icons.view_stream),
+              const SizedBox(width: 8),
+              ActionChip(
+                label: const Text("Sums ≤ 10"),
+                onPressed: () {
+                  setState(() {
+                    _mathConfig.minNumber = 1;
+                    _mathConfig.maxNumber = 10;
+                  });
+                },
+              ),
+              const SizedBox(width: 8),
+              ActionChip(
+                label: const Text("Sums ≤ 20"),
+                onPressed: () {
+                  setState(() {
+                    _mathConfig.minNumber = 1;
+                    _mathConfig.maxNumber = 20;
+                  });
+                },
               ),
             ],
-            selected: {_mathConfig.format},
-            onSelectionChanged: (val) {
-              setState(() => _mathConfig.format = val.first);
-            },
           ),
-          const SizedBox(height: 20),
-
-          _sectionHeader("Number Range"),
           const SizedBox(height: 12),
+
           Row(
             children: [
               Expanded(
                 child: TextFormField(
+                  key: ValueKey("min_${_mathConfig.minNumber}"),
                   initialValue: _mathConfig.minNumber.toString(),
                   decoration: const InputDecoration(
                     labelText: "Min",
@@ -163,13 +284,16 @@ class _MathScreenState extends State<MathScreen> {
                   keyboardType: TextInputType.number,
                   onChanged: (val) {
                     final parsed = int.tryParse(val);
-                    if (parsed != null) setState(() => _mathConfig.minNumber = parsed);
+                    if (parsed != null) {
+                      setState(() => _mathConfig.minNumber = parsed);
+                    }
                   },
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: TextFormField(
+                  key: ValueKey("max_${_mathConfig.maxNumber}"),
                   initialValue: _mathConfig.maxNumber.toString(),
                   decoration: const InputDecoration(
                     labelText: "Max",
@@ -179,7 +303,9 @@ class _MathScreenState extends State<MathScreen> {
                   keyboardType: TextInputType.number,
                   onChanged: (val) {
                     final parsed = int.tryParse(val);
-                    if (parsed != null) setState(() => _mathConfig.maxNumber = parsed);
+                    if (parsed != null) {
+                      setState(() => _mathConfig.maxNumber = parsed);
+                    }
                   },
                 ),
               ),
@@ -187,19 +313,22 @@ class _MathScreenState extends State<MathScreen> {
           ),
           const SizedBox(height: 20),
 
-          _sectionHeader("Page Layout"),
-          const SizedBox(height: 12),
-          SegmentedButton<int>(
-            segments: const [
-              ButtonSegment(value: 1, label: Text("1 Column")),
-              ButtonSegment(value: 2, label: Text("2 Columns")),
-            ],
-            selected: {_mathConfig.columnsCount},
-            onSelectionChanged: (val) {
-              setState(() => _mathConfig.columnsCount = val.first);
-            },
-          ),
-          const SizedBox(height: 20),
+          if (_mathConfig.activityMode ==
+              MathActivityMode.standardEquations) ...[
+            _sectionHeader("Page Layout"),
+            const SizedBox(height: 12),
+            SegmentedButton<int>(
+              segments: const [
+                ButtonSegment(value: 1, label: Text("1 Column")),
+                ButtonSegment(value: 2, label: Text("2 Columns")),
+              ],
+              selected: {_mathConfig.columnsCount},
+              onSelectionChanged: (val) {
+                setState(() => _mathConfig.columnsCount = val.first);
+              },
+            ),
+            const SizedBox(height: 20),
+          ],
 
           _sectionHeader("Questions Count"),
           Slider(
@@ -208,7 +337,8 @@ class _MathScreenState extends State<MathScreen> {
             max: 20,
             divisions: 8,
             label: "${_mathConfig.questionsCount}",
-            onChanged: (val) => setState(() => _mathConfig.questionsCount = val.toInt()),
+            onChanged: (val) =>
+                setState(() => _mathConfig.questionsCount = val.toInt()),
           ),
           Padding(
             padding: const EdgeInsets.only(left: 12),
@@ -219,12 +349,36 @@ class _MathScreenState extends State<MathScreen> {
           ),
           const SizedBox(height: 12),
 
-          SwitchListTile(
-            title: const Text("Show counting workspace", style: TextStyle(fontSize: 14)),
-            subtitle: const Text("Dashed box for drawing sticks", style: TextStyle(fontSize: 11)),
-            value: _mathConfig.drawWorkspace,
-            contentPadding: EdgeInsets.zero,
-            onChanged: (val) => setState(() => _mathConfig.drawWorkspace = val),
+          if (_mathConfig.activityMode ==
+              MathActivityMode.standardEquations) ...[
+            SwitchListTile(
+              title: const Text(
+                "Show counting workspace",
+                style: TextStyle(fontSize: 14),
+              ),
+              subtitle: const Text(
+                "Dashed box for drawing sticks",
+                style: TextStyle(fontSize: 11),
+              ),
+              value: _mathConfig.drawWorkspace,
+              contentPadding: EdgeInsets.zero,
+              onChanged: (val) =>
+                  setState(() => _mathConfig.drawWorkspace = val),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.shuffle),
+              label: const Text("Shuffle Question Seed"),
+              onPressed: () {
+                setState(() {
+                  _mathConfig.seed = RandomSeedService.generateNewSeed();
+                });
+              },
+            ),
           ),
           const SizedBox(height: 24),
         ],
@@ -235,7 +389,11 @@ class _MathScreenState extends State<MathScreen> {
   Widget _sectionHeader(String title) {
     return Text(
       title,
-      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: -0.2),
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        letterSpacing: -0.2,
+      ),
     );
   }
 }

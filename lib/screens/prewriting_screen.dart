@@ -60,7 +60,10 @@ class _PrewritingScreenState extends State<PrewritingScreen> {
             children: [
               Expanded(
                 child: CheckboxListTile(
-                  title: const Text("Name Line", style: TextStyle(fontSize: 13)),
+                  title: const Text(
+                    "Name Line",
+                    style: TextStyle(fontSize: 13),
+                  ),
                   value: _globalConfig.showNameLine,
                   dense: true,
                   contentPadding: EdgeInsets.zero,
@@ -74,7 +77,10 @@ class _PrewritingScreenState extends State<PrewritingScreen> {
               ),
               Expanded(
                 child: CheckboxListTile(
-                  title: const Text("Date Line", style: TextStyle(fontSize: 13)),
+                  title: const Text(
+                    "Date Line",
+                    style: TextStyle(fontSize: 13),
+                  ),
                   value: _globalConfig.showDateLine,
                   dense: true,
                   contentPadding: EdgeInsets.zero,
@@ -100,40 +106,136 @@ class _PrewritingScreenState extends State<PrewritingScreen> {
           const Divider(height: 32),
 
           _sectionHeader("Line Pattern"),
-          const SizedBox(height: 12),
-          SegmentedButton<LinePattern>(
-            segments: const [
-              ButtonSegment(
+          const SizedBox(height: 8),
+          DropdownButtonFormField<LinePattern>(
+            initialValue: _prewritingConfig.pattern,
+            decoration: const InputDecoration(
+              labelText: "Stroke / Path Pattern",
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+            items: const [
+              DropdownMenuItem(
                 value: LinePattern.straight,
-                label: Text("Straight"),
+                child: Text("Straight Lines"),
               ),
-              ButtonSegment(
+              DropdownMenuItem(
                 value: LinePattern.wave,
-                label: Text("Waves"),
+                child: Text("Smooth Waves"),
               ),
-              ButtonSegment(
+              DropdownMenuItem(
                 value: LinePattern.zigzag,
-                label: Text("Zigzag"),
+                child: Text("Zigzag Strokes"),
               ),
-              ButtonSegment(
+              DropdownMenuItem(
                 value: LinePattern.castle,
-                label: Text("Castle"),
+                child: Text("Castle / Step Strokes"),
+              ),
+              DropdownMenuItem(
+                value: LinePattern.curve,
+                child: Text("Scalloped Arches / Curves"),
+              ),
+              DropdownMenuItem(value: LinePattern.loop, child: Text("Loops")),
+              DropdownMenuItem(
+                value: LinePattern.spiral,
+                child: Text("Spirals / Coils"),
+              ),
+              DropdownMenuItem(
+                value: LinePattern.mixedStrokes,
+                child: Text("Mixed Strokes"),
+              ),
+              DropdownMenuItem(
+                value: LinePattern.corridor,
+                child: Text("Pencil Corridor Path"),
               ),
             ],
-            selected: {_prewritingConfig.pattern},
-            onSelectionChanged: (val) {
-              setState(() => _prewritingConfig.pattern = val.first);
+            onChanged: (val) {
+              if (val != null) {
+                setState(() {
+                  _prewritingConfig.pattern = val;
+                  if (val == LinePattern.corridor) {
+                    _prewritingConfig.showCorridorBoundaries = true;
+                  }
+                });
+              }
             },
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+
+          _sectionHeader("Contextual Activity Theme"),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<ContextPair>(
+            initialValue: _prewritingConfig.contextPair,
+            decoration: const InputDecoration(
+              labelText: "Start ➔ Destination Anchors",
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+            items: ContextPair.values.map((pair) {
+              return DropdownMenuItem(
+                value: pair,
+                child: Text(
+                  "${pair.startEmoji} ${pair.label} ${pair.endEmoji}",
+                ),
+              );
+            }).toList(),
+            onChanged: (val) {
+              if (val != null) {
+                setState(() => _prewritingConfig.contextPair = val);
+              }
+            },
+          ),
+          const SizedBox(height: 16),
+
+          if (_prewritingConfig.pattern == LinePattern.corridor ||
+              _prewritingConfig.showCorridorBoundaries) ...[
+            _sectionHeader("Pencil Corridor Settings"),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<CorridorWidthPreset>(
+              initialValue: _prewritingConfig.corridorWidth,
+              decoration: const InputDecoration(
+                labelText: "Corridor Path Width",
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              items: CorridorWidthPreset.values.map((preset) {
+                return DropdownMenuItem(
+                  value: preset,
+                  child: Text(preset.label),
+                );
+              }).toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() => _prewritingConfig.corridorWidth = val);
+                }
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
 
           SwitchListTile(
-            title: const Text("Dotted Lines (for tracing)", style: TextStyle(fontSize: 14)),
+            title: const Text(
+              "Show Corridor Boundary Walls",
+              style: TextStyle(fontSize: 14),
+            ),
+            value: _prewritingConfig.showCorridorBoundaries,
+            contentPadding: EdgeInsets.zero,
+            onChanged: (val) =>
+                setState(() => _prewritingConfig.showCorridorBoundaries = val),
+          ),
+          const SizedBox(height: 8),
+
+          SwitchListTile(
+            title: const Text(
+              "Dotted Tracing Guide",
+              style: TextStyle(fontSize: 14),
+            ),
             value: _prewritingConfig.isDotted,
             contentPadding: EdgeInsets.zero,
-            onChanged: (val) => setState(() => _prewritingConfig.isDotted = val),
+            onChanged: (val) =>
+                setState(() => _prewritingConfig.isDotted = val),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
           _sectionHeader("Number of Lines"),
           Slider(
@@ -142,7 +244,8 @@ class _PrewritingScreenState extends State<PrewritingScreen> {
             max: 10,
             divisions: 7,
             label: "${_prewritingConfig.lineCount}",
-            onChanged: (val) => setState(() => _prewritingConfig.lineCount = val.toInt()),
+            onChanged: (val) =>
+                setState(() => _prewritingConfig.lineCount = val.toInt()),
           ),
           Padding(
             padding: const EdgeInsets.only(left: 12),
@@ -151,16 +254,17 @@ class _PrewritingScreenState extends State<PrewritingScreen> {
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
-          _sectionHeader("Stroke Width"),
+          _sectionHeader("Stroke Thickness"),
           Slider(
             value: _prewritingConfig.strokeWidth,
             min: 1.0,
             max: 4.0,
             divisions: 6,
             label: "${_prewritingConfig.strokeWidth.toStringAsFixed(1)} pt",
-            onChanged: (val) => setState(() => _prewritingConfig.strokeWidth = val),
+            onChanged: (val) =>
+                setState(() => _prewritingConfig.strokeWidth = val),
           ),
           Padding(
             padding: const EdgeInsets.only(left: 12),
@@ -178,7 +282,11 @@ class _PrewritingScreenState extends State<PrewritingScreen> {
   Widget _sectionHeader(String title) {
     return Text(
       title,
-      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: -0.2),
+      style: const TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.bold,
+        letterSpacing: -0.2,
+      ),
     );
   }
 }

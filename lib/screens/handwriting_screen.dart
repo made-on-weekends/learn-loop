@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
@@ -49,7 +50,9 @@ class _HandwritingScreenState extends State<HandwritingScreen> {
     setState(() {
       _globalConfig = GlobalConfig(title: "Handwriting Practice");
       _handwritingConfig = HandwritingConfig();
-      _customTextController = TextEditingController(text: _handwritingConfig.customText);
+      _customTextController = TextEditingController(
+        text: _handwritingConfig.customText,
+      );
     });
   }
 
@@ -61,7 +64,11 @@ class _HandwritingScreenState extends State<HandwritingScreen> {
 
   Future<Uint8List> _buildPdf() {
     final kidProfile = SettingsService.currentKidProfile;
-    return PdfService.generateHandwriting(_globalConfig, _handwritingConfig, kidProfile: kidProfile);
+    return PdfService.generateHandwriting(
+      _globalConfig,
+      _handwritingConfig,
+      kidProfile: kidProfile,
+    );
   }
 
   @override
@@ -71,17 +78,25 @@ class _HandwritingScreenState extends State<HandwritingScreen> {
     return ValueListenableBuilder<KidProfile>(
       valueListenable: SettingsService.kidProfileNotifier,
       builder: (context, kidProfile, _) {
-        final defaults = HandwritingDefaultsResolver.resolve(kidProfile: kidProfile);
-        final effectiveStyle = _handwritingConfig.getEffectiveLineStyle(kidProfile);
-        final effectiveRowHeightMm = _handwritingConfig.getEffectiveRowHeightMm(kidProfile);
+        final defaults = HandwritingDefaultsResolver.resolve(
+          kidProfile: kidProfile,
+        );
+        final effectiveStyle = _handwritingConfig.getEffectiveLineStyle(
+          kidProfile,
+        );
+        final effectiveRowHeightMm = _handwritingConfig.getEffectiveRowHeightMm(
+          kidProfile,
+        );
 
         final isStyleOverridden = _handwritingConfig.lineStyleOverride != null;
-        final isRowHeightOverridden = _handwritingConfig.rowHeightMmOverride != null;
+        final isRowHeightOverridden =
+            _handwritingConfig.rowHeightMmOverride != null;
         final isAnyOverridden = isStyleOverridden || isRowHeightOverridden;
 
         // Determine matching row height preset
         double selectedRowHeight = _rowHeightPresets.first.mm;
-        double minHeightDiff = (effectiveRowHeightMm - _rowHeightPresets.first.mm).abs();
+        double minHeightDiff =
+            (effectiveRowHeightMm - _rowHeightPresets.first.mm).abs();
         for (final preset in _rowHeightPresets) {
           final diff = (effectiveRowHeightMm - preset.mm).abs();
           if (diff < minHeightDiff) {
@@ -138,7 +153,10 @@ class _HandwritingScreenState extends State<HandwritingScreen> {
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: isStyleOverridden
                           ? theme.colorScheme.tertiaryContainer
@@ -188,7 +206,10 @@ class _HandwritingScreenState extends State<HandwritingScreen> {
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: isRowHeightOverridden
                           ? theme.colorScheme.tertiaryContainer
@@ -220,10 +241,14 @@ class _HandwritingScreenState extends State<HandwritingScreen> {
                   helperText: "Guideline height based on kid's profile",
                   border: OutlineInputBorder(),
                   isDense: true,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
                 ),
                 items: _rowHeightPresets.map((preset) {
-                  final isDefault = (preset.mm - defaults.rowHeightMm).abs() < 0.1;
+                  final isDefault =
+                      (preset.mm - defaults.rowHeightMm).abs() < 0.1;
                   return DropdownMenuItem<double>(
                     value: preset.mm,
                     child: Text(
@@ -231,7 +256,9 @@ class _HandwritingScreenState extends State<HandwritingScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 13,
-                        fontWeight: isDefault ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isDefault
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
                   );
@@ -301,7 +328,10 @@ class _HandwritingScreenState extends State<HandwritingScreen> {
                 children: [
                   Expanded(
                     child: CheckboxListTile(
-                      title: const Text("Name Line", style: TextStyle(fontSize: 13)),
+                      title: const Text(
+                        "Name Line",
+                        style: TextStyle(fontSize: 13),
+                      ),
                       value: _globalConfig.showNameLine,
                       dense: true,
                       contentPadding: EdgeInsets.zero,
@@ -315,7 +345,10 @@ class _HandwritingScreenState extends State<HandwritingScreen> {
                   ),
                   Expanded(
                     child: CheckboxListTile(
-                      title: const Text("Date Line", style: TextStyle(fontSize: 13)),
+                      title: const Text(
+                        "Date Line",
+                        style: TextStyle(fontSize: 13),
+                      ),
                       value: _globalConfig.showDateLine,
                       dense: true,
                       contentPadding: EdgeInsets.zero,
@@ -362,8 +395,32 @@ class _HandwritingScreenState extends State<HandwritingScreen> {
                     child: Text("a-z (Lowercase)"),
                   ),
                   DropdownMenuItem(
+                    value: HandwritingSource.alphabetBoth,
+                    child: Text("Both Upper & Lowercase (Aa Bb)"),
+                  ),
+                  DropdownMenuItem(
                     value: HandwritingSource.numbers,
                     child: Text("Numbers (Range)"),
+                  ),
+                  DropdownMenuItem(
+                    value: HandwritingSource.caseMatching,
+                    child: Text("Match Uppercase to Lowercase"),
+                  ),
+                  DropdownMenuItem(
+                    value: HandwritingSource.alphabetSequence,
+                    child: Text("Fill in Missing Letters"),
+                  ),
+                  DropdownMenuItem(
+                    value: HandwritingSource.beginningSounds,
+                    child: Text("Circle Beginning Sound"),
+                  ),
+                  DropdownMenuItem(
+                    value: HandwritingSource.cvcWords,
+                    child: Text("CVC Words (3-Letter Words)"),
+                  ),
+                  DropdownMenuItem(
+                    value: HandwritingSource.sightWords,
+                    child: Text("Early Sight Words"),
                   ),
                   DropdownMenuItem(
                     value: HandwritingSource.customText,
@@ -375,11 +432,19 @@ class _HandwritingScreenState extends State<HandwritingScreen> {
                     setState(() {
                       _handwritingConfig.source = val;
                       if (val == HandwritingSource.alphabetUpper) {
-                        _handwritingConfig.alphabetStart = _handwritingConfig.alphabetStart.toUpperCase();
-                        _handwritingConfig.alphabetEnd = _handwritingConfig.alphabetEnd.toUpperCase();
+                        _handwritingConfig.alphabetStart = _handwritingConfig
+                            .alphabetStart
+                            .toUpperCase();
+                        _handwritingConfig.alphabetEnd = _handwritingConfig
+                            .alphabetEnd
+                            .toUpperCase();
                       } else if (val == HandwritingSource.alphabetLower) {
-                        _handwritingConfig.alphabetStart = _handwritingConfig.alphabetStart.toLowerCase();
-                        _handwritingConfig.alphabetEnd = _handwritingConfig.alphabetEnd.toLowerCase();
+                        _handwritingConfig.alphabetStart = _handwritingConfig
+                            .alphabetStart
+                            .toLowerCase();
+                        _handwritingConfig.alphabetEnd = _handwritingConfig
+                            .alphabetEnd
+                            .toLowerCase();
                       }
                     });
                   }
@@ -387,37 +452,90 @@ class _HandwritingScreenState extends State<HandwritingScreen> {
               ),
               const SizedBox(height: 12),
 
+              if (_handwritingConfig.source == HandwritingSource.cvcWords) ...[
+                SwitchListTile(
+                  key: const ValueKey('cvc_missing_vowel_switch'),
+                  title: const Text(
+                    "Missing Vowel Mode (e.g. C _ T)",
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  value: _handwritingConfig.cvcMissingVowel,
+                  contentPadding: EdgeInsets.zero,
+                  onChanged: (val) {
+                    setState(() {
+                      _handwritingConfig.cvcMissingVowel = val;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              if (_handwritingConfig.source == HandwritingSource.caseMatching ||
+                  _handwritingConfig.source ==
+                      HandwritingSource.alphabetSequence ||
+                  _handwritingConfig.source ==
+                      HandwritingSource.beginningSounds ||
+                  _handwritingConfig.source == HandwritingSource.cvcWords) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    key: const ValueKey('shuffle_literacy_seed_btn'),
+                    icon: const Icon(Icons.shuffle, size: 18),
+                    label: const Text("Shuffle Questions / Layout"),
+                    onPressed: () {
+                      setState(() {
+                        _handwritingConfig.seed = math.Random().nextInt(
+                          1000000,
+                        );
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
               // Alphabet range inputs
-              if (_handwritingConfig.source == HandwritingSource.alphabetUpper ||
-                  _handwritingConfig.source == HandwritingSource.alphabetLower) ...[
+              if (_handwritingConfig.source ==
+                      HandwritingSource.alphabetUpper ||
+                  _handwritingConfig.source ==
+                      HandwritingSource.alphabetLower) ...[
                 Row(
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        initialValue: _handwritingConfig.alphabetStart.toUpperCase(),
+                        initialValue: _handwritingConfig.alphabetStart
+                            .toUpperCase(),
                         isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: "Start Letter",
                           border: OutlineInputBorder(),
                           isDense: true,
                         ),
-                        items: List.generate(26, (index) => String.fromCharCode(65 + index))
-                            .map((char) => DropdownMenuItem(
-                                  value: char,
-                                  child: Text(
-                                    _handwritingConfig.source == HandwritingSource.alphabetUpper
-                                        ? char
-                                        : char.toLowerCase(),
+                        items:
+                            List.generate(
+                                  26,
+                                  (index) => String.fromCharCode(65 + index),
+                                )
+                                .map(
+                                  (char) => DropdownMenuItem(
+                                    value: char,
+                                    child: Text(
+                                      _handwritingConfig.source ==
+                                              HandwritingSource.alphabetUpper
+                                          ? char
+                                          : char.toLowerCase(),
+                                    ),
                                   ),
-                                ))
-                            .toList(),
+                                )
+                                .toList(),
                         onChanged: (val) {
                           if (val != null) {
                             setState(() {
                               _handwritingConfig.alphabetStart =
-                                  _handwritingConfig.source == HandwritingSource.alphabetUpper
-                                      ? val
-                                      : val.toLowerCase();
+                                  _handwritingConfig.source ==
+                                      HandwritingSource.alphabetUpper
+                                  ? val
+                                  : val.toLowerCase();
                             });
                           }
                         },
@@ -426,30 +544,39 @@ class _HandwritingScreenState extends State<HandwritingScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        initialValue: _handwritingConfig.alphabetEnd.toUpperCase(),
+                        initialValue: _handwritingConfig.alphabetEnd
+                            .toUpperCase(),
                         isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: "End Letter",
                           border: OutlineInputBorder(),
                           isDense: true,
                         ),
-                        items: List.generate(26, (index) => String.fromCharCode(65 + index))
-                            .map((char) => DropdownMenuItem(
-                                  value: char,
-                                  child: Text(
-                                    _handwritingConfig.source == HandwritingSource.alphabetUpper
-                                        ? char
-                                        : char.toLowerCase(),
+                        items:
+                            List.generate(
+                                  26,
+                                  (index) => String.fromCharCode(65 + index),
+                                )
+                                .map(
+                                  (char) => DropdownMenuItem(
+                                    value: char,
+                                    child: Text(
+                                      _handwritingConfig.source ==
+                                              HandwritingSource.alphabetUpper
+                                          ? char
+                                          : char.toLowerCase(),
+                                    ),
                                   ),
-                                ))
-                            .toList(),
+                                )
+                                .toList(),
                         onChanged: (val) {
                           if (val != null) {
                             setState(() {
                               _handwritingConfig.alphabetEnd =
-                                  _handwritingConfig.source == HandwritingSource.alphabetUpper
-                                      ? val
-                                      : val.toLowerCase();
+                                  _handwritingConfig.source ==
+                                      HandwritingSource.alphabetUpper
+                                  ? val
+                                  : val.toLowerCase();
                             });
                           }
                         },
@@ -509,12 +636,14 @@ class _HandwritingScreenState extends State<HandwritingScreen> {
               ],
 
               // Textarea custom input
-              if (_handwritingConfig.source == HandwritingSource.customText) ...[
+              if (_handwritingConfig.source ==
+                  HandwritingSource.customText) ...[
                 TextFormField(
                   controller: _customTextController,
                   decoration: const InputDecoration(
                     labelText: "Spelling Words (one item per line)",
-                    hintText: "Enter spelling text or name...\ne.g.\nALEX\nCAT\nDOG",
+                    hintText:
+                        "Enter spelling text or name...\ne.g.\nALEX\nCAT\nDOG",
                     border: OutlineInputBorder(),
                   ),
                   maxLines: 4,
@@ -597,7 +726,10 @@ class _HandwritingScreenState extends State<HandwritingScreen> {
               if (_handwritingConfig.mode == PracticeMode.tracing) ...[
                 const SizedBox(height: 12),
                 SwitchListTile(
-                  title: const Text("Use Dotted Font for Tracing", style: TextStyle(fontSize: 14)),
+                  title: const Text(
+                    "Use Dotted Font for Tracing",
+                    style: TextStyle(fontSize: 14),
+                  ),
                   value: _handwritingConfig.dottedFont,
                   contentPadding: EdgeInsets.zero,
                   onChanged: (val) {
