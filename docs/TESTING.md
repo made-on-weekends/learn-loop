@@ -66,7 +66,7 @@ To install the app independently or share it offline:
 3. Transfer the APK to your device to install it.
 
 > [!TIP]
-> For a detailed guide on pushing the built APK directly to your device via ADB command line, splitting APKs per CPU architecture, and troubleshooting connection or signature errors, see the [Android Device Testing & Deployment Guide](file:///mnt/workbench/repos/learn-loop/docs/ANDROID_DEVICE_TESTING.md).
+> For a detailed guide on pushing the built APK directly to your device via ADB command line, splitting APKs per CPU architecture, and troubleshooting connection or signature errors, see the [Android Device Testing & Deployment Guide](./ANDROID_DEVICE_TESTING.md).
 
 ---
 

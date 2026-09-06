@@ -12,7 +12,7 @@
 
 ### 1. Unique Package ID (Application ID)
 Every app on the Play Store requires a unique package name.
-- Open [android/app/build.gradle](file:///mnt/workbench/repos/learn-loop/android/app/build.gradle).
+- Open [android/app/build.gradle.kts](../android/app/build.gradle.kts).
 - Update the `applicationId` to your final unique domain:
   ```groovy
   defaultConfig {
@@ -22,7 +22,7 @@ Every app on the Play Store requires a unique package name.
   ```
 
 ### 2. Set App Name & Launcher Icon
-- **App Name**: Update the `android:label` attribute under `application` inside [android/app/src/main/AndroidManifest.xml](file:///mnt/workbench/repos/learn-loop/android/app/src/main/AndroidManifest.xml).
+- **App Name**: Update the `android:label` attribute under `application` inside [android/app/src/main/AndroidManifest.xml](../android/app/src/main/AndroidManifest.xml).
 - **Launcher Icons**: Make sure your custom icon assets are generated and placed in `android/app/src/main/res/mipmap-*` folders.
 
 ---
@@ -45,7 +45,7 @@ Generate a keystore file using the command-line `keytool` utility. Keep the pass
   ```
 
 ### 2. Configure Credentials File
-Create a properties file at [android/key.properties](file:///mnt/workbench/repos/learn-loop/android/key.properties). This file contains sensitive credentials and is ignored by Git by default:
+Create a properties file at [android/key.properties](../android/key.properties). This file contains sensitive credentials and is ignored by Git by default:
 ```properties
 storePassword=YOUR_KEYSTORE_PASSWORD
 keyPassword=YOUR_KEY_PASSWORD
@@ -54,7 +54,7 @@ storeFile=/absolute/path/to/upload-keystore.jks
 ```
 
 ### 3. Update Build Script
-Configure the app Gradle build script at [android/app/build.gradle](file:///mnt/workbench/repos/learn-loop/android/app/build.gradle) to read signing credentials and configure the signing configurations:
+Configure the app Gradle build script at [android/app/build.gradle.kts](../android/app/build.gradle.kts) to read signing credentials and configure the signing configurations:
 ```groovy
 def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file('key.properties')
